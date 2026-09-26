@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRAHARI — Citizen Weather & Cyclone Intelligence</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  
+  <!-- MapLibre GL JS v5 with Globe Projection & Sub-Meter Slippy Tiles -->
+  <link rel="stylesheet" href="maplibre-gl.css" />
+  <script src="maplibre-gl.js"></script>
+  
+  <!-- Real Project GIS Data (Fani Track, Puri Wards, Holland Surge Flood Zones, Shelters, Severed Routes) -->
+  <script src="prahari_data.js"></script>
+
+  <style>
+    :root {
+      --ui-transparency: 0.12; /* Default 90% see-through */
+      --ui-blur: 8px;
+    }
+
+    /* Google-style clean, bold font hierarchy */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Google Sans", Helvetica, Arial, sans-serif;
+      background-color: #000000;
+      color: #f8fafc;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    .font-mono-num {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    /* Google-style clean glass cards */
+    .google-card {
+      background: rgba(10, 15, 25, var(--ui-transparency, 0.12));
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(var(--ui-blur, 8px));
+      -webkit-backdrop-filter: blur(var(--ui-blur, 8px));
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+
+    .google-card:hover, .google-card.card-pinned {
+      background: rgba(10, 16, 28, 0.92) !important;
+      border-color: rgba(56, 189, 248, 0.5) !important;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7) !important;
+    }
+
+    .google-chip {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: all 0.2s ease;
+    }
+    .google-chip:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+    .google-chip.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left {
+      display: none !important;
+    }
+
+    /* In-Map Floating Weather HUD Marker */
+    .weather-map-hud {
+      cursor: pointer;
+      filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.85));
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
+    }
+    .weather-map-hud:hover {
+      transform: translateY(-4px) scale(1.03);
+    }
+
+    @keyframes anchor-wave {
+      0% { transform: scale(0.7); opacity: 1; }
+      100% { transform: scale(2.6); opacity: 0; }
+    }
+    .anchor-wave-anim {
+      animation: anchor-wave 1.8s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body class="overflow-hidden h-screen w-screen select-none relative bg-black">
+
+  <!-- ========================================================================= -->
+  <!-- 1. GOOGLE-STYLE TOP BAR (Search Bar, Quick Location Pills, Live Badge)    -->
+  <!-- ========================================================================= -->
+  <header class="absolute top-4 left-6 right-6 z-30 flex items-center justify-between pointer-events-auto gap-4">
+    
+    <!-- Left: Minimal Clean Brand Title -->
+    <div class="flex items-center gap-2.5 cursor-pointer" onclick="flyToPreset('orbit')">
+      <div class="w-8 h-8 rounded-full bg-sky-500/20 border border-sky-400 flex items-center justify-center text-sky-400">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="9" stroke-width="2"/>
+          <path d="M12 3a9 9 0 0 1 0 18" fill="currentColor" fill-opacity="0.3"/>
+          <path d="M12 7a5 5 0 0 1 0 10" fill="currentColor"/>
+        </svg>
+      </div>
+      <div>
+        <div class="text-[14px] font-extrabold tracking-wide text-white uppercase leading-tight">
+          PRAHARI <span class="text-sky-400 font-bold">LIFELINE</span>
+        </div>
+        <div class="text-[10px] text-slate-400 tracking-wider">
+          Citizen Weather & Cyclone Intelligence
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Google-Style Search Bar & Quick Village Buttons -->
+    <div class="flex items-center gap-2 max-w-2xl w-full justify-center">
+      
+      <!-- Clean Search Input -->
+      <div class="relative w-full max-w-md">
+        <div class="flex items-center bg-slate-900/80 border border-slate-700/80 hover:border-sky-400 rounded-full px-4 py-2 shadow-xl backdrop-blur-md transition-all">
+          <span class="text-slate-400 mr-2 text-base">🔍</span>
+          <input type="text" id="mainSearchInput" placeholder="Search any village, town, or city (e.g. Puri, Bangaon, Balasore)..." 
+                 class="bg-transparent text-[13px] text-white placeholder-slate-400 outline-none w-full font-medium"
+                 oninput="handleSearchInput(this.value)" onkeydown="if(event.key==='Enter') executeFirstSearch()">
+          <span class="text-[10px] text-slate-500 font-mono-num ml-1 cursor-pointer hover:text-white" onclick="clearSearch()">✕</span>
+        </div>
+
+        <!-- Search Results Dropdown -->
+        <div id="searchResultsDropdown" class="absolute top-11 left-0 right-0 google-card rounded-2xl border border-sky-500/40 shadow-2xl p-2 hidden z-50 max-h-64 overflow-y-auto">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Quick Location Pills -->
+      <div class="hidden lg:flex items-center gap-1.5" id="quickPillsContainer">
+        <button onclick="selectLocation('Puri Town', 19.805, 85.830)" class="google-chip active px-3 py-1.5 rounded-full text-[11px] font-bold text-white" id="pill-puri">Puri</button>
+        <button onclick="selectLocation('Brahmagiri', 19.800, 85.680)" class="google-chip px-3 py-1.5 rounded-full text-[11px] font-medium text-slate-300" id="pill-brahmagiri">Brahmagiri</button>
+        <button onclick="selectLocation('Konark', 19.887, 86.094)" class="google-chip px-3 py-1.5 rounded-full text-[11px] font-medium text-slate-300" id="pill-konark">Konark</button>
+        <button onclick="selectLocation('Bangaon', 23.048, 88.825)" class="google-chip px-3 py-1.5 rounded-full text-[11px] font-medium text-slate-300" id="pill-bangaon">Bangaon</button>
+        <button onclick="selectLocation('Bhubaneswar', 20.296, 85.824)" class="google-chip px-3 py-1.5 rounded-full text-[11px] font-medium text-slate-300" id="pill-bhubaneswar">Bhubaneswar</button>
+      </div>
+
+    </div>
+
+    <!-- Right: Clean Status Badge & Transparency Slider -->
+    <div class="flex items-center gap-3">
+      <div class="hidden sm:flex items-center gap-1.5 bg-slate-900/70 border border-slate-800 rounded-full px-3 py-1 text-[11px] font-mono-num">
+        <span class="text-slate-400 text-[10px]">SEE-THROUGH:</span>
+        <input type="range" min="0" max="98" value="90" class="w-16 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400" oninput="setTransparency(this.value)">
+        <span id="transparencyLabel" class="text-sky-400 font-bold text-[10px]">90%</span>
+      </div>
+
+      <div id="topAlertBadge" class="flex items-center gap-2 bg-emerald-950/70 border border-emerald-600/70 rounded-full px-3 py-1 text-emerald-300 text-[11px] font-bold tracking-wider">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span id="topAlertBadgeText">WEATHER NORMAL</span>
+      </div>
+    </div>
+
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 2. MAPLIBRE GL JS CONTAINER                                               -->
+  <!-- ========================================================================= -->
+  <div id="map" class="w-full h-full absolute inset-0 cursor-crosshair"></div>
+
+  <!-- ========================================================================= -->
+  <!-- 3. THE MAIN HERO CARD: GOOGLE-STYLE LOCATION WEATHER & SAFETY PANEL        -->
+  <!-- ========================================================================= -->
+  <aside id="locationHeroCard" class="absolute top-20 right-6 z-20 w-[390px] max-w-[calc(100vw-3rem)] google-card rounded-3xl p-5 shadow-2xl pointer-events-auto space-y-4 max-h-[calc(100vh-6.5rem)] overflow-y-auto">
+    
+    <!-- Location Title & Language Switcher -->
+    <div class="flex items-start justify-between gap-2 pb-2 border-b border-white/10">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-[18px] font-extrabold text-white tracking-tight" id="loc-name">Puri Town</span>
+          <span class="text-[9px] px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500 text-emerald-300 font-bold uppercase" id="loc-risk-tag">SAFE</span>
+        </div>
+        <div class="text-[11px] text-slate-400 font-mono-num mt-0.5" id="loc-sub">19.805°N, 85.830°E</div>
+      </div>
+
+      <!-- Language Switcher Tabs -->
+      <div class="flex bg-slate-900/90 border border-slate-700/80 rounded-full p-0.5 text-[10px] font-bold font-sans">
+        <button onclick="setLang('od')" id="lbtn-od" class="px-2.5 py-0.5 rounded-full bg-sky-600 text-white">ଓଡ଼ିଆ</button>
+        <button onclick="setLang('hi')" id="lbtn-hi" class="px-2 py-0.5 rounded-full text-slate-300 hover:text-white">हिन्दी</button>
+        <button onclick="setLang('en')" id="lbtn-en" class="px-2 py-0.5 rounded-full text-slate-300 hover:text-white">EN</button>
+      </div>
+    </div>
+
+    <!-- Bold Temperature & Weather Hero Block (Google Style) -->
+    <div class="flex items-center justify-between py-1">
+      <div>
+        <div class="flex items-baseline gap-2">
+          <span class="text-5xl font-black text-white tracking-tighter" id="loc-temp">28°</span>
+          <span class="text-slate-400 text-lg font-bold">C</span>
+        </div>
+        <div class="text-[15px] font-bold text-sky-400 mt-1" id="loc-condition">Partly Cloudy</div>
+        <div class="text-[11px] text-slate-400" id="loc-feels">Feels like 31°C • Moderate humidity</div>
+      </div>
+      <div class="text-6xl drop-shadow-lg" id="loc-icon">⛅</div>
+    </div>
+
+    <!-- 3 Simple Bold Knowledge Chips (10th Pass Citizen Clarity) -->
+    <div class="grid grid-cols-1 gap-2 text-[12px]">
+      
+      <!-- 1. Rain Timing: Answers "When will it rain & for what time?" -->
+      <div class="p-3 rounded-2xl bg-sky-950/40 border border-sky-500/40 flex items-start gap-3">
+        <span class="text-2xl mt-0.5">🌧️</span>
+        <div class="w-full">
+          <div class="text-[10px] uppercase font-bold text-sky-400 tracking-wider" id="loc-rain-label">WHEN WILL IT RAIN?</div>
+          <div class="text-[13px] font-bold text-white leading-snug" id="loc-rain-val">
+            No heavy rain expected today
+          </div>
+          <div class="text-[11px] text-slate-300 mt-0.5" id="loc-rain-desc">
+            Clear skies expected. Favorable conditions for farming and travel.
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Wind & Cyclone Danger -->
+      <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-700/60 flex items-start gap-3" id="loc-wind-box">
+        <span class="text-2xl mt-0.5" id="loc-wind-icon">💨</span>
+        <div class="w-full">
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider" id="loc-wind-label">WIND & CYCLONE STATUS</div>
+          <div class="text-[13px] font-bold text-white leading-snug" id="loc-wind-val">
+            10 km/h gentle breeze
+          </div>
+          <div class="text-[11px] text-slate-300 mt-0.5" id="loc-wind-desc">
+            Calm conditions. Completely safe for all outdoor activities.
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Safe Shelter & Flooded Roads -->
+      <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-700/60 flex items-start gap-3" id="loc-shelter-box">
+        <span class="text-2xl mt-0.5" id="loc-shelter-icon">🏠</span>
+        <div class="w-full">
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider" id="loc-shelter-label">NEAREST CYCLONE SHELTER</div>
+          <div class="text-[13px] font-bold text-white leading-snug" id="loc-shelter-val">
+            Inland Safe Zone
+          </div>
+          <div class="text-[11px] text-slate-300 mt-0.5" id="loc-shelter-desc">
+            Safe from ocean storm surge (>300 km from coast).
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Google-Style Clean Hourly Rain Strip (Horizontal scroll) -->
+    <div class="space-y-1.5 pt-1">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+        <span id="loc-hourly-label">24-HOUR HOURLY FORECAST</span>
+        <span class="text-[9px] text-slate-500 font-mono-num">Open-Meteo Live</span>
+      </div>
+      <div class="flex items-center gap-2 overflow-x-auto pb-1.5" id="loc-hourly-strip">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Life-Safety Action Box (10th Pass Citizen Clarity) -->
+    <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 space-y-1.5">
+      <div class="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+        <span>⚡</span>
+        <span id="loc-advice-label">WHAT TO DO RIGHT NOW</span>
+      </div>
+      <div class="text-[11px] text-slate-200 leading-relaxed" id="loc-advice-text">
+        • <b>Drinking Water:</b> Boil water before drinking; store 3 days in clean pots.<br>
+        • <b>Mobile Phones:</b> Charge all phones and torchlights now before power cuts.<br>
+        • <b>Cows & Goats:</b> Untie cattle from low sheds; take them to high school grounds.<br>
+        • <b>Aadhaar & Food:</b> Pack documents & chuda/gud in sealed plastic bags.
+      </div>
+    </div>
+
+    <!-- Action Buttons (Listen Aloud, Advisory, Helpline) -->
+    <div class="grid grid-cols-2 gap-2 pt-1 font-bold text-[11px]">
+      <button onclick="speakCurrentAdvisory()" class="py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/80 text-amber-300 flex items-center justify-center gap-1.5 transition-all shadow-md">
+        <span>🔊</span>
+        <span id="btn-audio-label">LISTEN (ଶୁଣନ୍ତୁ)</span>
+      </button>
+
+      <a href="tel:1077" class="py-2.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-400/80 text-emerald-300 flex items-center justify-center gap-1.5 transition-all shadow-md text-center">
+        <span>📞</span>
+        <span>HELP: 1077</span>
+      </a>
+    </div>
+
+    <button onclick="openTrilingualAdvisoryModal()" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-[11px] tracking-wide flex items-center justify-center gap-1.5 transition-all shadow-lg">
+      <span>📢</span>
+      <span id="btn-full-adv-label">VIEW OFFICIAL DISPATCH ORDER</span>
+    </button>
+
+  </aside>
+
+  <!-- ========================================================================= -->
+  <!-- 4. BOTTOM DYNAMIC CONTROLS (Decoupled & Centered on Searched Location)    -->
+  <!-- ========================================================================= -->
+  <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 pointer-events-auto">
+    
+    <!-- Time / Forecast Scrubber Bar -->
+    <div class="google-card rounded-full px-4 py-1.5 flex items-center gap-3 border border-white/20 shadow-2xl text-[11px] font-mono-num">
+      <button onclick="toggleTrackPlay()" id="playBtn" class="w-6 h-6 rounded-full bg-sky-500/30 hover:bg-sky-500 text-white flex items-center justify-center border border-sky-400 text-xs">
+        ▶
+      </button>
+      <span class="text-slate-300 text-[10px] font-bold" id="timeSliderTitle">24-HR FORECAST:</span>
+      <input type="range" id="timeSlider" min="0" max="23" value="0" class="w-48 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400" oninput="onTimeSlider(this.value)">
+      <span id="timeSliderLabel" class="text-sky-400 font-bold text-[10px] min-w-[140px] text-center">Now: Current Live</span>
+    </div>
+
+    <!-- Main Pill Navigation Toolbar (Dynamic based on searched location) -->
+    <div class="google-card rounded-full p-1.5 flex items-center gap-1 border border-white/20 shadow-2xl">
+      
+      <!-- Primary: Dynamic Searched Location Focus Button -->
+      <button onclick="flyToCurrentLocation()" class="google-chip active px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 text-white" id="btn-focus">
+        <span>📍</span>
+        <span id="btn-focus-label">Focus: Puri Town</span>
+      </button>
+
+      <!-- Area View (Zoom 9.8) -->
+      <button onclick="zoomToLevel('area')" class="google-chip px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 text-slate-300" id="btn-area">
+        <span>🛰️</span>
+        <span>Area</span>
+      </button>
+
+      <!-- Streets & Homes View (Zoom 16.8 at this location) -->
+      <button onclick="zoomToLevel('street')" class="google-chip px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 text-slate-300" id="btn-street">
+        <span>🏘️</span>
+        <span>Streets</span>
+      </button>
+
+      <!-- Cyclone Fani 2019 Odisha Event Switcher -->
+      <button onclick="activateCycloneFaniMode()" class="google-chip px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 text-slate-300" id="btn-fani-mode">
+        <span>🌀</span>
+        <span>Fani 2019</span>
+      </button>
+
+      <!-- Global Orbit View -->
+      <button onclick="zoomToLevel('orbit')" class="google-chip px-2.5 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 text-slate-300" id="btn-orbit">
+        <span>🌍</span>
+      </button>
+
+      <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
+
+      <!-- Live RainViewer Radar Clouds Toggle -->
+      <button onclick="toggleRadarLayer()" class="google-chip active px-3 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 text-sky-300" id="btn-toggle-radar">
+        <span>☁️</span>
+        <span id="radarBtnText">Radar: ON</span>
+      </button>
+
+      <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
+
+      <!-- Basemap Switchers -->
+      <button onclick="switchBasemap('esri')" class="google-chip active px-2.5 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 text-white" id="btn-basemap-esri">
+        <span>🛰️ ESRI</span>
+      </button>
+      <button onclick="switchBasemap('osm')" class="google-chip px-2.5 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 text-slate-300" id="btn-basemap-osm">
+        <span>🗺️ OSM</span>
+      </button>
+      <button onclick="switchBasemap('nasa')" class="google-chip px-2.5 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 text-slate-300" id="btn-basemap-nasa">
+        <span>🌀 NASA</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 5. TRILINGUAL ADVISORY MODAL (Odia, Hindi, English)                       -->
+  <!-- ========================================================================= -->
+  <div id="advisoryModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="google-card max-w-2xl w-full rounded-3xl p-6 border border-sky-500/50 shadow-2xl space-y-4 bg-slate-950/95">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">📢</span>
+          <div>
+            <div class="text-[15px] font-bold text-white uppercase tracking-wider">OFFICIAL EARLY WARNING DISPATCH</div>
+            <div class="text-[10px] text-sky-400 font-mono-num">ODISHA STATE DISASTER MANAGEMENT AUTHORITY (OSDMA) • PRAHARI</div>
+          </div>
+        </div>
+        <button onclick="closeTrilingualAdvisoryModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold">✕</button>
+      </div>
+
+      <!-- Language Tabs in Modal -->
+      <div class="flex gap-2">
+        <button onclick="setLang('od')" id="madv-od" class="px-4 py-1.5 rounded-xl bg-sky-600 text-white text-[12px] font-bold font-sans">ଓଡ଼ିଆ (Odia)</button>
+        <button onclick="setLang('hi')" id="madv-hi" class="px-4 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 text-[12px] font-bold font-sans">हिन्दी (Hindi)</button>
+        <button onclick="setLang('en')" id="madv-en" class="px-4 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 text-[12px] font-bold font-sans">English</button>
+      </div>
+
+      <div class="p-4 rounded-2xl bg-rose-950/50 border border-rose-600/60 space-y-3">
+        <div class="text-[15px] font-bold text-rose-300 leading-snug" id="madv-title">
+          ଜରୁରୀକାଳୀନ ଖାଲି କରିବା ନିର୍ଦ୍ଦେଶ — ପୁରୀ ଉପକୂଳ
+        </div>
+        <div class="text-[12px] text-slate-200 leading-relaxed" id="madv-body">
+          ଆସନ୍ତା ୪ ଘଣ୍ଟା ମଧ୍ୟରେ ୩.୮ ମିଟର ଉଚ୍ଚ ଜ୍ୱାର ମେରାଇନ୍ ଡ୍ରାଇଭ୍ ଉପକୂଳ ଅତିକ୍ରମ କରିବ। ସେଲ୍ଟର ବ୍ଲକ-ଏ କୁ ଯାଉଥିବା ରାସ୍ତା ୧.୮ ମିଟର ବନ୍ୟା ଜଳରେ ବୁଡ଼ିଯାଇଛି। ଦକ୍ଷିଣ ରାସ୍ତା ଦେଇ ଯାଆନ୍ତୁ ନାହିଁ। ତୁରନ୍ତ ଉତ୍ତର NH316 ଦେଇ ସୁରକ୍ଷିତ ସ୍ଥାନକୁ ଯାଆନ୍ତୁ।
+        </div>
+        <div class="p-2.5 rounded-xl bg-amber-950/40 border border-amber-600/40 text-[11px] text-amber-200 flex items-center gap-2">
+          <span>⚡</span>
+          <div>
+            <span class="font-bold">କାର୍ଯ୍ୟାନୁଷ୍ଠାନ ନିର୍ଦ୍ଦେଶ:</span>
+            <span id="madv-action">ତୁରନ୍ତ ଉତ୍ତର ବାଇପାସ ଦେଇ ନିରାପଦ ସ୍ଥାନକୁ ସ୍ଥାନାନ୍ତର ହୁଅନ୍ତୁ।</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-1">
+        <button onclick="closeTrilingualAdvisoryModal()" class="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold uppercase tracking-wider">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 6. APPLICATION JAVASCRIPT LOGIC                                           -->
+  <!-- ========================================================================= -->
+  <script>
+    let map = null;
+    let currentBasemap = 'esri';
+    let currentLang = 'od'; // Default to Odia for 10th-pass citizen in Odisha
+    let isPlaying = false;
+    let playInterval = null;
+    let searchDebounce = null;
+    let selectedMarker = null;
+    let shelterMarker = null;
+
+    // Modes: 'live' (for any searched town/village) or 'fani' (for 2019 cyclone simulation)
+    let appMode = 'live'; 
+    let liveForecastHour = 0;
+
+    // RainViewer Radar Variables
+    let radarFrames = [];
+    let radarIndex = -1;
+    let radarVisible = true;
+
+    // The Active Selected Location (The focal point of the whole application)
+    let activeLocation = {
+      name: 'Puri Town',
+      lat: 19.805,
+      lon: 85.830,
+      weather: null
+    };
+
+    function setTransparency(val) {
+      const percentage = parseInt(val, 10);
+      const opacity = 1.0 - (percentage / 100.0);
+      document.documentElement.style.setProperty('--ui-transparency', opacity.toFixed(3));
+      document.getElementById('transparencyLabel').innerText = `${percentage}%`;
+    }
+
+    // Geodesic circle generator for local weather catchment on map
+    function createGeoJSONCircle(centerLon, centerLat, radiusKm, points = 36) {
+      const coords = [];
+      const d = radiusKm / 6371.0;
+      const latR = centerLat * Math.PI / 180;
+      const lonR = centerLon * Math.PI / 180;
+      for (let i = 0; i <= points; i++) {
+        const bearing = 2 * Math.PI * i / points;
+        const lat2 = Math.asin(Math.sin(latR) * Math.cos(d) + Math.cos(latR) * Math.sin(d) * Math.cos(bearing));
+        const lon2 = lonR + Math.atan2(Math.sin(bearing) * Math.sin(d) * Math.cos(latR), Math.cos(d) - Math.sin(latR) * Math.sin(lat2));
+        coords.push([lon2 * 180 / Math.PI, lat2 * 180 / Math.PI]);
+      }
+      return {
+        type: 'Feature',
+        geometry: { type: 'Polygon', coordinates: [coords] },
+        properties: {}
+      };
+    }
+
+    // Initialize MapLibre GL JS
+    function initMap() {
+      map = new maplibregl.Map({
+        container: 'map',
+        style: {
+          version: 8,
+          projection: { type: 'globe' },
+          sources: {
+            'esri-satellite': {
+              type: 'raster',
+              tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+              tileSize: 256,
+              maxzoom: 19,
+              attribution: '© ESRI World Imagery'
+            },
+            'osm-streets': {
+              type: 'raster',
+              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              maxzoom: 19,
+              attribution: '© OpenStreetMap'
+            },
+            'nasa-fani': {
+              type: 'raster',
+              tiles: ['https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/2019-05-03/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg'],
+              tileSize: 256,
+              maxzoom: 9,
+              attribution: '© NASA GIBS MODIS Terra'
+            }
+          },
+          layers: [
+            {
+              id: 'base-raster',
+              type: 'raster',
+              source: 'esri-satellite',
+              paint: { 'raster-opacity': 1.0 }
+            }
+          ],
+          sky: {
+            'sky-color': '#01040a',
+            'horizon-color': '#020d1c',
+            'fog-color': '#041630',
+            'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 0.95, 6, 0.2, 12, 0.0]
+          }
+        },
+        center: [85.830, 19.805],
+        zoom: 12.5,
+        pitch: 35,
+        bearing: 15,
+        attributionControl: false
+      });
+
+      map.on('load', () => {
+        setupDataLayers();
+        setupMapClick();
+        initRainViewerRadar();
+        // Load default initial hero location
+        selectLocation('Puri Town', 19.805, 85.830);
+      });
+    }
+
+    function setupDataLayers() {
+      if (!window.PRAHARI_DATA) return;
+
+      // 1. Holland 3.8m Surge Flood zones
+      map.addSource('flood-zones-src', { type: 'geojson', data: window.PRAHARI_DATA.floodZones });
+      map.addLayer({
+        id: 'flood-zones-fill',
+        type: 'fill',
+        source: 'flood-zones-src',
+        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.16 }
+      });
+      map.addLayer({
+        id: 'flood-zones-line',
+        type: 'line',
+        source: 'flood-zones-src',
+        paint: { 'line-color': ['get', 'color'], 'line-width': 2.0, 'line-opacity': 0.8 }
+      });
+
+      // 2. Puri Wards
+      map.addSource('puri-wards-src', { type: 'geojson', data: window.PRAHARI_DATA.puriWards });
+      map.addLayer({
+        id: 'puri-wards-fill',
+        type: 'fill',
+        source: 'puri-wards-src',
+        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.12 }
+      });
+      map.addLayer({
+        id: 'puri-wards-line',
+        type: 'line',
+        source: 'puri-wards-src',
+        paint: { 'line-color': ['get', 'color'], 'line-width': 2.0, 'line-opacity': 0.9 }
+      });
+
+      // 3. Severed Evacuation Corridors
+      map.addSource('evac-routes-src', { type: 'geojson', data: window.PRAHARI_DATA.evacuationRoutes });
+      map.addLayer({
+        id: 'evac-routes-severed',
+        type: 'line',
+        source: 'evac-routes-src',
+        filter: ['==', ['get', 'is_cut'], true],
+        paint: { 'line-color': '#f43f5e', 'line-width': 4, 'line-dasharray': [2, 1.5], 'line-opacity': 0.9 }
+      });
+      map.addLayer({
+        id: 'evac-routes-clear',
+        type: 'line',
+        source: 'evac-routes-src',
+        filter: ['==', ['get', 'is_cut'], false],
+        paint: { 'line-color': '#10b981', 'line-width': 3, 'line-opacity': 0.8 }
+      });
+
+      // 4. Cyclone Fani Track line
+      const trackCoords = window.PRAHARI_DATA.stormTrack.map(pt => [pt.lon, pt.lat]);
+      map.addSource('fani-track-line-src', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: trackCoords } }
+      });
+      map.addLayer({
+        id: 'fani-track-line',
+        type: 'line',
+        source: 'fani-track-line-src',
+        paint: { 'line-color': '#38bdf8', 'line-width': 2.5, 'line-opacity': 0.8, 'line-dasharray': [3, 2] }
+      });
+
+      // 5. Dynamic Catchment Radius Source
+      map.addSource('location-radius-src', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+      map.addLayer({
+        id: 'location-radius-fill',
+        type: 'fill',
+        source: 'location-radius-src',
+        paint: { 'fill-color': '#0284c7', 'fill-opacity': 0.08 }
+      });
+      map.addLayer({
+        id: 'location-radius-line',
+        type: 'line',
+        source: 'location-radius-src',
+        paint: { 'line-color': '#0284c7', 'line-width': 2, 'line-dasharray': [3, 2], 'line-opacity': 0.85 }
+      });
+
+      // 6. Dynamic Direct Evacuation Line Source
+      map.addSource('evac-direct-line-src', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+      map.addLayer({
+        id: 'evac-direct-line',
+        type: 'line',
+        source: 'evac-direct-line-src',
+        paint: { 'line-color': '#10b981', 'line-width': 3.5, 'line-dasharray': [2, 2], 'line-opacity': 0.95 }
+      });
+    }
+
+    // =========================================================================
+    // RAINVIEWER LIVE CLOUD & PRECIPITATION RADAR INTEGRATION
+    // =========================================================================
+    async function initRainViewerRadar() {
+      try {
+        const resp = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+        const data = await resp.json();
+        if (data && data.radar && data.radar.past && data.radar.past.length > 0) {
+          radarFrames = data.radar.past;
+          radarIndex = radarFrames.length - 1; // Latest live frame
+          addRadarLayerToMap();
+        }
+      } catch (e) {
+        console.warn('RainViewer Radar API temporarily unreachable:', e);
+      }
+    }
+
+    function addRadarLayerToMap() {
+      if (!map || radarFrames.length === 0 || radarIndex < 0) return;
+      const frame = radarFrames[radarIndex];
+      const tileUrl = `https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
+
+      if (map.getSource('rainviewer-radar-src')) {
+        if (map.getLayer('rainviewer-radar-layer')) map.removeLayer('rainviewer-radar-layer');
+        map.removeSource('rainviewer-radar-src');
+      }
+
+      map.addSource('rainviewer-radar-src', {
+        type: 'raster',
+        tiles: [tileUrl],
+        tileSize: 256,
+        attribution: '© RainViewer Radar'
+      });
+
+      const beforeLayer = map.getLayer('flood-zones-fill') ? 'flood-zones-fill' : undefined;
+      map.addLayer({
+        id: 'rainviewer-radar-layer',
+        type: 'raster',
+        source: 'rainviewer-radar-src',
+        paint: {
+          'raster-opacity': radarVisible ? 0.72 : 0.0,
+          'raster-fade-duration': 300
+        }
+      }, beforeLayer);
+    }
+
+    function toggleRadarLayer() {
+      radarVisible = !radarVisible;
+      const btn = document.getElementById('btn-toggle-radar');
+      const txt = document.getElementById('radarBtnText');
+      if (map && map.getLayer('rainviewer-radar-layer')) {
+        map.setPaintProperty('rainviewer-radar-layer', 'raster-opacity', radarVisible ? 0.72 : 0.0);
+      }
+      if (btn) btn.classList.toggle('active', radarVisible);
+      if (txt) txt.innerText = radarVisible ? 'Radar: ON' : 'Radar: OFF';
+    }
+
+    // CLICK ANYWHERE ON MAP TO SELECT LOCATION
+    function setupMapClick() {
+      map.on('click', (e) => {
+        const lng = parseFloat(e.lngLat.lng.toFixed(3));
+        const lat = parseFloat(e.lngLat.lat.toFixed(3));
+        selectLocation(`Location (${lat}°, ${lng}°)`, lat, lng);
+      });
+    }
+
+    // =========================================================================
+    // LOCATION HERO CONTROLLER (The entire console revolves around this location)
+    // =========================================================================
+    async function selectLocation(name, lat, lon) {
+      activeLocation.name = name;
+      activeLocation.lat = lat;
+      activeLocation.lon = lon;
+
+      // Update Bottom Bar Focus Button
+      const focusBtn = document.getElementById('btn-focus-label');
+      if (focusBtn) focusBtn.innerText = `Focus: ${name}`;
+      updateNavigationActiveButton('btn-focus');
+
+      // Update Quick Location Pills
+      highlightPill(name);
+
+      // Smoothly fly camera to this location
+      map.flyTo({
+        center: [lon, lat],
+        zoom: Math.max(map.getZoom(), 12.5),
+        duration: 1600,
+        essential: true
+      });
+
+      // Switch scrubber to live forecast mode for this location
+      switchAppMode('live');
+
+      // Fetch live weather data
+      await loadWeatherData(lat, lon);
+
+      // 1. Plot In-Map Interactive Floating Weather HUD
+      updateInMapWeatherHUD(lat, lon, activeLocation.weather, name);
+
+      // 2. Plot Dynamic 15km Catchment Radius Ring on Map
+      updateLocationCatchmentCircle(lat, lon, activeLocation.weather.isDanger);
+
+      // 3. Plot Evacuation Line and Shelter Pin on Map (if coastal)
+      updateEvacuationLine(lat, lon, activeLocation.weather.shelter);
+
+      // 4. Render Google-Style Knowledge Card in Sidebar
+      renderHeroCard();
+    }
+
+    function highlightPill(name) {
+      const pills = ['puri', 'brahmagiri', 'konark', 'bangaon', 'bhubaneswar'];
+      const cleanName = name.toLowerCase();
+      pills.forEach(p => {
+        const el = document.getElementById(`pill-${p}`);
+        if (el) {
+          const match = cleanName.includes(p);
+          el.classList.toggle('active', match);
+          el.classList.toggle('text-white', match);
+          el.classList.toggle('text-slate-300', !match);
+        }
+      });
+    }
+
+    // =========================================================================
+    // IN-MAP FLOATING WEATHER HUD (Plotted directly over the location on the map)
+    // =========================================================================
+    function updateInMapWeatherHUD(lat, lon, weather, name) {
+      if (selectedMarker) {
+        selectedMarker.remove();
+      }
+
+      if (!weather) return;
+
+      const isDanger = weather.isDanger;
+      const borderClass = isDanger ? 'border-rose-500' : 'border-sky-400';
+      const badgeClass = isDanger ? 'bg-rose-950 text-rose-300 border border-rose-500' : 'bg-emerald-950 text-emerald-300 border border-emerald-500';
+      const needleClass = isDanger ? 'border-t-rose-500' : 'border-t-sky-400';
+      const dotBgClass = isDanger ? 'bg-rose-500' : 'bg-sky-400';
+
+      const el = document.createElement('div');
+      el.className = 'weather-map-hud pointer-events-auto select-none';
+      el.onclick = (e) => {
+        e.stopPropagation();
+        flyToCurrentLocation();
+      };
+
+      const rainText = weather.rain.hasRain ? weather.rain.summary : '☀️ No rain expected today';
+      const windLabel = `${weather.wind.speed} km/h • ${weather.wind.badge}`;
+
+      el.innerHTML = `
+        <div class="bg-slate-950/92 hover:bg-slate-900 border-2 ${borderClass} rounded-2xl p-3 shadow-2xl backdrop-blur-md min-w-[215px] max-w-[260px] text-white">
+          <!-- Top Row: Location & Status Tag -->
+          <div class="flex items-center justify-between gap-1.5 pb-1.5 border-b border-white/10">
+            <div class="font-extrabold text-[12px] truncate flex items-center gap-1">
+              <span>📍</span>
+              <span class="truncate">${name}</span>
+            </div>
+            <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase ${badgeClass}">
+              ${weather.wind.tagText}
+            </span>
+          </div>
+
+          <!-- Main Temp + Icon + Condition -->
+          <div class="flex items-center justify-between py-1">
+            <div>
+              <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-black tracking-tight">${weather.curTemp}°</span>
+                <span class="text-slate-400 text-xs font-bold">C</span>
+              </div>
+              <div class="text-[11px] font-bold text-sky-300 leading-tight">${weather.conditionText}</div>
+            </div>
+            <div class="text-3xl filter drop-shadow">${weather.icon}</div>
+          </div>
+
+          <!-- Rain ETA Badge -->
+          <div class="p-1.5 rounded-xl bg-sky-950/60 border border-sky-500/30 flex items-center gap-1.5 text-[10px] text-sky-200 mb-1 leading-snug">
+            <span>🌧️</span>
+            <span class="font-semibold">${rainText}</span>
+          </div>
+
+          <!-- Wind Speed & Direction -->
+          <div class="p-1.5 rounded-xl bg-slate-900 border border-slate-700/80 flex items-center justify-between text-[10px] text-slate-300">
+            <div class="flex items-center gap-1 font-bold text-white">
+              <span>💨</span>
+              <span>${weather.curWind} km/h</span>
+            </div>
+            <span class="text-[9px] text-slate-400 truncate max-w-[100px]">${weather.wind.badge}</span>
+          </div>
+        </div>
+
+        <!-- Needle pointing down to ground -->
+        <div class="w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[9px] ${needleClass} mx-auto -mt-[1px]"></div>
+        
+        <!-- Pulsing Ground Anchor Ripple -->
+        <div class="w-3.5 h-3.5 rounded-full ${dotBgClass} border-2 border-white shadow-xl mx-auto -mt-1 relative z-10">
+          <div class="absolute inset-0 rounded-full ${dotBgClass} anchor-wave-anim"></div>
+        </div>
+      `;
+
+      selectedMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([lon, lat])
+        .addTo(map);
+    }
+
+    // Dynamic 15km Catchment Radius Circle on Map
+    function updateLocationCatchmentCircle(lat, lon, isDanger) {
+      if (!map || !map.getSource('location-radius-src')) return;
+      const circleGeo = createGeoJSONCircle(lon, lat, 15);
+      const color = isDanger ? '#f43f5e' : '#0284c7';
+
+      map.getSource('location-radius-src').setData(circleGeo);
+      map.setPaintProperty('location-radius-fill', 'fill-color', color);
+      map.setPaintProperty('location-radius-line', 'line-color', color);
+    }
+
+    // Direct Evacuation Line & Shelter Marker on Map
+    function updateEvacuationLine(lat, lon, shelter) {
+      if (!map || !map.getSource('evac-direct-line-src')) return;
+
+      if (!shelter || !shelter.isCoastZone) {
+        map.getSource('evac-direct-line-src').setData({ type: 'FeatureCollection', features: [] });
+        if (shelterMarker) {
+          shelterMarker.remove();
+          shelterMarker = null;
+        }
+        return;
+      }
+
+      const shelters = window.PRAHARI_DATA ? window.PRAHARI_DATA.infrastructure.features.filter(f => f.properties.kind === 'shelter') : [];
+      const target = shelters.find(s => s.properties.name === shelter.name) || shelters[0];
+      if (!target) return;
+
+      const [sLon, sLat] = target.geometry.coordinates;
+      const lineGeo = {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [[lon, lat], [sLon, sLat]]
+        }
+      };
+
+      map.getSource('evac-direct-line-src').setData(lineGeo);
+      map.setPaintProperty('evac-direct-line', 'line-color', shelter.isFlooded ? '#f43f5e' : '#10b981');
+
+      if (shelterMarker) shelterMarker.remove();
+      const sEl = document.createElement('div');
+      sEl.className = 'flex items-center gap-1 bg-slate-950/95 border border-emerald-400 rounded-full px-2.5 py-1 text-[10px] font-bold text-emerald-300 shadow-xl';
+      sEl.innerHTML = `<span>🏠</span><span>${shelter.name} (${shelter.distanceKm} km)</span>`;
+
+      shelterMarker = new maplibregl.Marker({ element: sEl, anchor: 'bottom' })
+        .setLngLat([sLon, sLat])
+        .addTo(map);
+    }
+
+    // =========================================================================
+    // WEATHER DATA LOADER & PARSER (Accurate, Non-Negative, Dynamic Wind/Shelter)
+    // =========================================================================
+    async function loadWeatherData(lat, lon) {
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m&timezone=auto&forecast_days=2`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        if (data && data.current) {
+          activeLocation.weather = parseWeatherData(data, lat, lon);
+          return;
+        }
+      } catch (e) {
+        console.warn('Open-Meteo live API fallback to simulation:', e);
+      }
+
+      // Offline / Local Simulation Fallback
+      activeLocation.weather = getFallbackWeatherData(lat, lon);
+    }
+
+    function parseWeatherData(d, lat, lon) {
+      const cur = d.current;
+      const hourly = d.hourly;
+
+      // 1. Rain Analysis (Strictly non-negative duration & accurate time)
+      const rainInfo = getRainInfo(hourly, currentLang);
+
+      // 2. Wind Analysis (Real wind speed, no false Cat-4 text on light breeze)
+      const windSpeed = Math.round(cur.wind_speed_10m);
+      const windInfo = getWindInfo(windSpeed, currentLang);
+
+      // 3. Shelter Analysis (Inland safe zone vs coastal surge)
+      const shelterInfo = getShelterInfo(lat, lon, currentLang);
+
+      // 4. Weather Condition from WMO Code
+      const weatherCode = cur.weather_code !== undefined ? cur.weather_code : 1;
+      const conditionObj = getWeatherInfoFromCode(weatherCode, currentLang);
+
+      // 5. Build 24h Hourly Cards for Horizontal Strip
+      const hourCards = [];
+      for (let i = 0; i < Math.min(18, hourly.time.length); i += 3) {
+        const tStr = hourly.time[i];
+        const tObj = new Date(tStr);
+        const tLabel = i === 0 ? 'Now' : (isNaN(tObj.getTime()) ? tStr.split('T')[1].slice(0, 5) : tObj.toLocaleTimeString([], { hour: 'numeric', hour12: true }));
+        const p = hourly.precipitation_probability ? (hourly.precipitation_probability[i] || 0) : 0;
+        const temp = Math.round(hourly.temperature_2m[i]);
+        const hCode = hourly.weather_code ? hourly.weather_code[i] : 1;
+        const hCond = getWeatherInfoFromCode(hCode, currentLang);
+
+        hourCards.push({ time: tLabel, temp, rainProb: p, icon: hCond.icon });
+      }
+
+      const wardInfo = findContainingWard(lat, lon);
+      const isDanger = windInfo.status === 'danger' || (shelterInfo.isCoastZone && shelterInfo.isFlooded);
+
+      return {
+        curTemp: Math.round(cur.temperature_2m),
+        feelsLike: Math.round(cur.apparent_temperature || cur.temperature_2m),
+        curWind: windSpeed,
+        icon: conditionObj.icon,
+        conditionText: conditionObj.text,
+        rain: rainInfo,
+        wind: windInfo,
+        shelter: shelterInfo,
+        ward: wardInfo,
+        isDanger: isDanger,
+        hourly: hourCards,
+        rawHourly: hourly
+      };
+    }
+
+    function getFallbackWeatherData(lat, lon) {
+      const isPuriFani = lat < 20.0 && lat > 19.5 && lon > 85.5 && lon < 86.5;
+      const windSpeed = isPuriFani ? 185 : 12;
+      const windInfo = getWindInfo(windSpeed, currentLang);
+      const shelterInfo = getShelterInfo(lat, lon, currentLang);
+
+      return {
+        curTemp: 28,
+        feelsLike: 33,
+        curWind: windSpeed,
+        icon: isPuriFani ? '🌧️' : '⛅',
+        conditionText: isPuriFani ? 'Heavy Rain & Storm' : 'Partly Cloudy',
+        rain: {
+          hasRain: isPuriFani,
+          summary: isPuriFani ? 'Rain starts around 2:00 PM (~5 hours)' : 'No rain expected in next 24 hours',
+          desc: isPuriFani ? 'Total 65 mm rain expected. Low roads will flood.' : 'Clear skies expected. Favorable for farming and travel.',
+          durationHours: isPuriFani ? 5 : 0,
+          totalMm: isPuriFani ? 65 : 0
+        },
+        wind: windInfo,
+        shelter: shelterInfo,
+        ward: findContainingWard(lat, lon),
+        isDanger: windInfo.status === 'danger',
+        hourly: [
+          { time: 'Now', temp: 28, rainProb: 15, icon: '☀️' },
+          { time: '2 PM', temp: 26, rainProb: 85, icon: '🌧️' },
+          { time: '5 PM', temp: 25, rainProb: 95, icon: '⛈️' },
+          { time: '8 PM', temp: 24, rainProb: 60, icon: '🌧️' },
+          { time: '11 PM', temp: 25, rainProb: 30, icon: '🌦️' },
+          { time: 'Tmrw', temp: 27, rainProb: 10, icon: '⛅' }
+        ],
+        rawHourly: null
+      };
+    }
+
+    // Accurate Rain Calculation (Strictly non-negative)
+    function getRainInfo(hourly, lang) {
+      let rainStartIdx = -1;
+      let totalRainMm = 0;
+      let hasRain = false;
+
+      for (let i = 0; i < Math.min(24, hourly.time.length); i++) {
+        const prob = hourly.precipitation_probability ? (hourly.precipitation_probability[i] || 0) : 0;
+        const mm = hourly.precipitation ? (hourly.precipitation[i] || 0) : 0;
+        if (prob >= 35 || mm >= 0.2) {
+          hasRain = true;
+          if (rainStartIdx === -1) rainStartIdx = i;
+          totalRainMm += mm;
+        }
+      }
+
+      if (!hasRain) {
+        return {
+          hasRain: false,
+          summary: lang === 'od' ? 'ଆଗାମୀ ୨୪ ଘଣ୍ଟା ମଧ୍ୟରେ ବର୍ଷା ନାହିଁ' : lang === 'hi' ? 'अगले 24 घंटे में बारिश का कोई अनुमान नहीं' : 'No rain expected in next 24 hours',
+          desc: lang === 'od' ? 'ଆକାଶ ପରିଷ୍କାର ରହିବ। ଫସଲ ଅମଳ ଓ ଯାତାୟାତ ପାଇଁ ଉତ୍ତମ ପାଗ।' :
+                lang === 'hi' ? 'मौसम साफ रहेगा। फसल कटाई व यात्रा के लिए अनुकूल समय।' :
+                'Clear and dry conditions expected. Favorable for farming and transport.',
+          durationHours: 0,
+          totalMm: 0
+        };
+      }
+
+      let count = 0;
+      const startIdx = rainStartIdx === 0 ? 0 : rainStartIdx;
+      for (let i = startIdx; i < Math.min(24, hourly.time.length); i++) {
+        const prob = hourly.precipitation_probability ? (hourly.precipitation_probability[i] || 0) : 0;
+        const mm = hourly.precipitation ? (hourly.precipitation[i] || 0) : 0;
+        if (prob >= 35 || mm >= 0.2) count++;
+        else break;
+      }
+      const durationHours = Math.max(1, count);
+
+      let startLabel = '';
+      if (rainStartIdx === 0) {
+        startLabel = lang === 'od' ? 'ବର୍ତ୍ତମାନ ବର୍ଷା ହେଉଛି' : lang === 'hi' ? 'अभी बारिश हो रही है' : 'Raining right now';
+      } else {
+        const tStr = hourly.time[rainStartIdx];
+        const d = new Date(tStr);
+        const timeFormatted = isNaN(d.getTime()) ? tStr.split('T')[1].slice(0, 5) : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+        startLabel = lang === 'od' ? `${timeFormatted} ରୁ ବର୍ଷା ଆରମ୍ଭ` : lang === 'hi' ? `${timeFormatted} से बारिश शुरू` : `Starts around ${timeFormatted}`;
+      }
+
+      const roundedMm = Math.round(totalRainMm * 10) / 10;
+      const summary = lang === 'od' ? `${startLabel} (~${durationHours} ଘଣ୍ଟା ଚାଲିବ)` :
+                      lang === 'hi' ? `${startLabel} (~${durationHours} घंटे तक जारी)` :
+                      `${startLabel} (lasts ~${durationHours} hour${durationHours > 1 ? 's' : ''})`;
+
+      const floodWarning = totalRainMm > 35 ?
+        (lang === 'od' ? 'ତଳିଆ ଅଞ୍ଚଳ ଓ ରାସ୍ତାରେ ପାଣି ଜମିବାର ସମ୍ଭାବନା ଅଛି।' : lang === 'hi' ? 'निचले रास्तों में जलभराव हो सकता है।' : 'Low-lying areas may experience waterlogging.') :
+        (lang === 'od' ? 'ହାଲୁକା ବର୍ଷା; ରାସ୍ତାଘାଟ ବୁଡ଼ିବାର ଭୟ ନାହିଁ।' : lang === 'hi' ? 'हल्की बारिश; जलभराव का खतरा नहीं।' : 'Light showers; no severe road flooding.');
+
+      const desc = lang === 'od' ? `ମୋଟ ${roundedMm} ମିମି ବର୍ଷା ଆକଳନ। ${floodWarning}` :
+                   lang === 'hi' ? `कुल ${roundedMm} मिमी बारिश का अनुमान। ${floodWarning}` :
+                   `Estimated total: ~${roundedMm} mm rainfall. ${floodWarning}`;
+
+      return {
+        hasRain: true,
+        summary,
+        desc,
+        durationHours,
+        totalMm: roundedMm
+      };
+    }
+
+    // Dynamic Wind Categories (Strictly based on speed, never false Cat-4)
+    function getWindInfo(speedKmH, lang) {
+      const s = Math.round(speedKmH);
+      if (s >= 90) {
+        return {
+          speed: s,
+          badge: lang === 'od' ? 'ପ୍ରବଳ ବାତ୍ୟା (Cat-4/5)' : lang === 'hi' ? 'भीषण चक्रवात (Cat-4)' : 'Violent Cyclone (Cat-4)',
+          summary: lang === 'od' ? `${s} କିମି/ଘଣ୍ଟା ଧ୍ୱଂସକାରୀ ଝଡ଼ ପବନ` : lang === 'hi' ? `${s} किमी/घंटा विनाशकारी आंधी` : `${s} km/h violent hurricane winds`,
+          desc: lang === 'od' ? 'ଟିଣ ଓ ଆଜବେଷ୍ଟସ ଛାତ ଉଡ଼ିଯିବ। କୌଣସି ପରିସ୍ଥିତିରେ ବାହାରକୁ ବାହାରନ୍ତୁ ନାହିଁ; ପକ୍କା ଆଶ୍ରୟସ୍ଥଳକୁ ଯାଆନ୍ତୁ।' :
+                lang === 'hi' ? 'टीन व एस्बेस्टस की छत उड़ सकती है। बाहर बिल्कुल न निकलें; पक्के शेल्टर में रहें।' :
+                'Tin & asbestos roofs will blow away. Power lines down. Evacuate immediately to concrete shelter!',
+          status: 'danger',
+          tagText: lang === 'od' ? 'ବାତ୍ୟା ସତର୍କତା' : lang === 'hi' ? 'चक्रवात अलर्ट' : 'CYCLONE ALERT'
+        };
+      } else if (s >= 50) {
+        return {
+          speed: s,
+          badge: lang === 'od' ? 'ତୀବ୍ର ଝଡ଼ ପବନ (Gale)' : lang === 'hi' ? 'तेज आंधी (Gale Wind)' : 'Strong Gale Winds',
+          summary: lang === 'od' ? `${s} କିମି/ଘଣ୍ଟା ବେଗରେ ତୀବ୍ର ପବନ` : lang === 'hi' ? `${s} किमी/घंटा तेज आंधी` : `${s} km/h strong gale winds`,
+          desc: lang === 'od' ? 'ଗଛର ଡାଳ ଭାଙ୍ଗିବାର ଆଶଙ୍କା ଅଛି। ଖୋଲା ପଡ଼ିଆ ଓ ପୁରୁଣା ଗଛ ତଳେ ଛିଡ଼ା ହୁଅନ୍ତୁ ନାହିଁ।' :
+                lang === 'hi' ? 'पेड़ों की टहनियां टूट सकती हैं। पुराने पेड़ों व होर्डिंग्स से दूर सुरक्षित रहें।' :
+                'Tree branches may break. Secure loose rooftop objects and remain indoors.',
+          status: 'warning',
+          tagText: lang === 'od' ? 'ତୀବ୍ର ପବନ' : lang === 'hi' ? 'तेज हवा' : 'GALE WARNING'
+        };
+      } else if (s >= 25) {
+        return {
+          speed: s,
+          badge: lang === 'od' ? 'ମଧ୍ୟମ ଧରଣର ପବନ' : lang === 'hi' ? 'मध्यम हवा' : 'Moderate Breeze',
+          summary: lang === 'od' ? `${s} କିମି/ଘଣ୍ଟା ସାଧାରଣ ପବନ` : lang === 'hi' ? `${s} किमी/घंटा मध्यम हवा` : `${s} km/h moderate breeze`,
+          desc: lang === 'od' ? 'ପବନ ସ୍ୱାଭାବିକ ଅଛି। ଚାଷ କାମ ଓ ଯାତାୟାତ ସୁରକ୍ଷିତ।' :
+                lang === 'hi' ? 'हवा सामान्य है। खेती एवं दैनिक कार्य सुरक्षित रूप से किए जा सकते हैं।' :
+                'Noticeable breeze, but safe for normal work and transit.',
+          status: 'normal',
+          tagText: lang === 'od' ? 'ସ୍ୱାଭାବିକ' : lang === 'hi' ? 'सामान्य' : 'BREEZY'
+        };
+      } else {
+        return {
+          speed: s,
+          badge: lang === 'od' ? 'ଶାନ୍ତ ବାୟୁ' : lang === 'hi' ? 'शांत हवा' : 'Gentle Breeze',
+          summary: lang === 'od' ? `${s} କିମି/ଘଣ୍ଟା ଶାନ୍ତ ପବନ` : lang === 'hi' ? `${s} किमी/घंटा शांत हवा` : `${s} km/h gentle breeze`,
+          desc: lang === 'od' ? 'ପବନ ସମ୍ପୂର୍ଣ୍ଣ ଶାନ୍ତ ଓ ଅନୁକୂଳ ଅଛି। କୌଣସି ବିପଦ ନାହିଁ।' :
+                lang === 'hi' ? 'हवा पूरी तरह शांत व अनुकूल है। कोई मौसम संबंधी खतरा नहीं है।' :
+                'Calm and pleasant breeze. Completely safe for all outdoor activities.',
+          status: 'safe',
+          tagText: lang === 'od' ? 'ସୁରକ୍ଷିତ' : lang === 'hi' ? 'सुरक्षित' : 'SAFE NOW'
+        };
+      }
+    }
+
+    // Dynamic Shelter Classification (Inland vs Coastal Surge)
+    function getShelterInfo(lat, lon, lang) {
+      const nearest = findNearestShelter(lat, lon);
+      const isCoastZone = nearest.distanceKm <= 60;
+
+      if (!isCoastZone) {
+        return {
+          isCoastZone: false,
+          title: lang === 'od' ? 'ଭିତର ଭୌଗୋଳିକ ଅଞ୍ଚଳ (ସୁରକ୍ଷିତ)' : lang === 'hi' ? 'आंतरिक सुरक्षित क्षेत्र' : 'INLAND SAFE ZONE',
+          val: lang === 'od' ? `ସମୁଦ୍ର ଜ୍ୱାର ବିପଦ ନାହିଁ (ସମୁଦ୍ର ଠାରୁ ${Math.round(nearest.distanceKm)} କିମି ଦୂର)` :
+               lang === 'hi' ? `समुद्री लहरों का खतरा नहीं (तट से ${Math.round(nearest.distanceKm)} किमी दूर)` :
+               `Safe from ocean storm surge (> ${Math.round(nearest.distanceKm)} km from coast)`,
+          desc: lang === 'od' ? 'ଏହି ସ୍ଥାନ ଉପକୂଳ ଠାରୁ ବହୁ ଦୂରରେ ଥିବାରୁ ସାମୁଦ୍ରିକ ବାତ୍ୟା ଆଶ୍ରୟସ୍ଥଳର ଆବଶ୍ୟକତା ନାହିଁ। ସ୍ଥାନୀୟ ବର୍ଷା ନିୟମାବଳୀ ପାଳନ କରନ୍ତୁ।' :
+                lang === 'hi' ? 'यह स्थान समुद्र तट से काफी दूर है। समुद्री चक्रवात शेल्टर की आवश्यकता नहीं है। सामान्य बारिश दिशा-निर्देशों का पालन करें।' :
+                'This location is far inland. No coastal cyclone surge hazard; standard municipal drainage rules apply.',
+          isFlooded: false,
+          distanceKm: nearest.distanceKm,
+          name: nearest.name
+        };
+      }
+
+      return {
+        isCoastZone: true,
+        title: lang === 'od' ? 'ନିକଟସ୍ଥ ବାତ୍ୟା ଆଶ୍ରୟସ୍ଥଳ' : lang === 'hi' ? 'निकटतम चक्रवात शेल्टर' : 'NEAREST CYCLONE SHELTER',
+        val: `${nearest.name} (${nearest.distanceKm} ${lang === 'od' ? 'କିମି' : lang === 'hi' ? 'किमी' : 'km'})`,
+        desc: nearest.roadFlooded ?
+          (lang === 'od' ? '⚠️ <b>ମେରାଇନ୍ ଡ୍ରାଇଭ ରାସ୍ତାରେ ୪ ଫୁଟ ପାଣି ବୁଡ଼ିଯାଇଛି!</b> ଉତ୍ତର ବାଇପାସ ରାସ୍ତା ଦେଇ ଯାଆନ୍ତୁ।' :
+           lang === 'hi' ? '⚠️ <b>मरीन ड्राइव सड़क पर 4 फीट पानी भरा है!</b> उत्तर बाईपास से सुरक्षित शरण लें।' :
+           '⚠️ <b>Marine Drive road submerged under 1.8m surge!</b> Take northern high bypass instead.') :
+          (lang === 'od' ? '✓ ଆଶ୍ରୟସ୍ଥଳକୁ ଯିବା ରାସ୍ତା ସୁରକ୍ଷିତ ଓ ଶୁଖିଲା ଅଛି।' :
+           lang === 'hi' ? '✓ शेल्टर जाने का मार्ग पूरी तरह सूखा व सुरक्षित है।' :
+           '✓ Evacuation road to shelter is dry and fully accessible.'),
+        isFlooded: nearest.roadFlooded,
+        distanceKm: nearest.distanceKm,
+        name: nearest.name
+      };
+    }
+
+    function getWeatherInfoFromCode(code, lang) {
+      if (code === 0) {
+        return {
+          icon: '☀️',
+          text: lang === 'od' ? 'ପରିଷ୍କାର ଖରାଟିଆ ଆକାଶ' : lang === 'hi' ? 'साफ धूप वाला मौसम' : 'Clear Sky & Sunshine'
+        };
+      } else if (code <= 3) {
+        return {
+          icon: '⛅',
+          text: lang === 'od' ? 'ଆଂଶିକ ମେଘୁଆ ଆକାଶ' : lang === 'hi' ? 'आंशिक रूप से बादल' : 'Partly Cloudy'
+        };
+      } else if (code <= 48) {
+        return {
+          icon: '🌫️',
+          text: lang === 'od' ? 'କୁହୁଡ଼ିଆ ପାଗ' : lang === 'hi' ? 'कोहरा व धुंध' : 'Foggy / Hazy'
+        };
+      } else if (code <= 55) {
+        return {
+          icon: '🌦️',
+          text: lang === 'od' ? 'ହାଲୁକା ଝିପିଝିପି ବର୍ଷା' : lang === 'hi' ? 'हल्की बूंदाबांदी' : 'Light Drizzle'
+        };
+      } else if (code <= 65 || (code >= 80 && code <= 82)) {
+        return {
+          icon: '🌧️',
+          text: lang === 'od' ? 'ମଧ୍ୟମରୁ ପ୍ରବଳ ବର୍ଷା' : lang === 'hi' ? 'मध्यम से भारी बारिश' : 'Rain Showers'
+        };
+      } else if (code >= 95) {
+        return {
+          icon: '⛈️',
+          text: lang === 'od' ? 'ବିଜୁଳି ଘଡ଼ଘଡ଼ି ସହ ଝଡ଼ବର୍ଷା' : lang === 'hi' ? 'गरज-चमक के साथ आंधी तूफान' : 'Severe Thunderstorm & Gale'
+        };
+      }
+      return {
+        icon: '🌤️',
+        text: lang === 'od' ? 'ସ୍ୱାଭାବିକ ପାଗ' : lang === 'hi' ? 'सामान्य मौसम' : 'Mild Weather'
+      };
+    }
+
+    function getDistanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function findNearestShelter(lat, lon) {
+      if (!window.PRAHARI_DATA || !window.PRAHARI_DATA.infrastructure) {
+        return { name: 'Puri Multipurpose Shelter Block A', distanceKm: 1.2, capacity: 500, roadFlooded: true };
+      }
+
+      const shelters = window.PRAHARI_DATA.infrastructure.features.filter(f => f.properties.kind === 'shelter');
+      let best = null;
+      let minD = 999999;
+
+      shelters.forEach(s => {
+        const [sLon, sLat] = s.geometry.coordinates;
+        const d = getDistanceKm(lat, lon, sLat, sLon);
+        if (d < minD) {
+          minD = d;
+          best = s;
+        }
+      });
+
+      if (best) {
+        const p = best.properties;
+        const isFlooded = p.route_exposed || (lat < 19.82 && lon > 85.81);
+        return {
+          name: p.name,
+          distanceKm: parseFloat(minD.toFixed(1)),
+          capacity: p.capacity || 400,
+          roadFlooded: isFlooded
+        };
+      }
+      return { name: 'Puri Multipurpose Shelter Block A', distanceKm: 1.2, capacity: 500, roadFlooded: true };
+    }
+
+    function findContainingWard(lat, lon) {
+      if (!window.PRAHARI_DATA || !window.PRAHARI_DATA.puriWards) return null;
+      let best = null;
+      let minD = 999999;
+
+      window.PRAHARI_DATA.puriWards.features.forEach(w => {
+        const coords = w.geometry.coordinates[0];
+        const [wLon, wLat] = coords[0];
+        const d = getDistanceKm(lat, lon, wLat, wLon);
+        if (d < minD) {
+          minD = d;
+          best = w.properties;
+        }
+      });
+
+      return minD < 25 ? best : null;
+    }
+
+    // =========================================================================
+    // RENDER GOOGLE-STYLE LOCATION KNOWLEDGE CARD (Right Sidebar)
+    // =========================================================================
+    function renderHeroCard() {
+      const w = activeLocation.weather;
+      if (!w) return;
+
+      const lang = currentLang;
+
+      // Location Name & Subtitle
+      document.getElementById('loc-name').innerText = activeLocation.name;
+      let subText = `${activeLocation.lat.toFixed(3)}°N, ${activeLocation.lon.toFixed(3)}°E`;
+      if (w.ward) {
+        subText = `${w.ward.ward_name} (Pop: ${w.ward.population.toLocaleString()} • Fragility: ${w.ward.fragility_rating}/5)`;
+      }
+      document.getElementById('loc-sub').innerText = subText;
+      document.getElementById('loc-temp').innerText = `${w.curTemp}°`;
+      document.getElementById('loc-icon').innerText = w.icon;
+      document.getElementById('loc-condition').innerText = w.conditionText;
+
+      // Status Tag & Header Alert Badge
+      const riskTag = document.getElementById('loc-risk-tag');
+      const topBadge = document.getElementById('topAlertBadge');
+      const topBadgeText = document.getElementById('topAlertBadgeText');
+
+      if (w.isDanger) {
+        riskTag.innerText = w.wind.tagText;
+        riskTag.className = 'text-[9px] px-2 py-0.5 rounded-full bg-rose-950 border border-rose-500 text-rose-300 font-bold uppercase';
+        if (topBadge) {
+          topBadge.className = 'flex items-center gap-2 bg-rose-950/70 border border-rose-600/70 rounded-full px-3 py-1 text-rose-300 text-[11px] font-bold tracking-wider';
+          topBadgeText.innerText = 'CYCLONE ALERT';
+        }
+      } else {
+        riskTag.innerText = w.wind.tagText;
+        riskTag.className = 'text-[9px] px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500 text-emerald-300 font-bold uppercase';
+        if (topBadge) {
+          topBadge.className = 'flex items-center gap-2 bg-emerald-950/70 border border-emerald-600/70 rounded-full px-3 py-1 text-emerald-300 text-[11px] font-bold tracking-wider';
+          topBadgeText.innerText = 'WEATHER NORMAL';
+        }
+      }
+
+      // Feels like text
+      const feelsWord = lang === 'od' ? 'ଅନୁଭବ:' : lang === 'hi' ? 'महसूस:' : 'Feels like:';
+      const humidityWord = lang === 'od' ? 'ଆର୍ଦ୍ରତା ସ୍ୱାଭାବିକ' : lang === 'hi' ? 'मध्यम उमस' : 'Moderate humidity';
+      document.getElementById('loc-feels').innerText = `${feelsWord} ${w.feelsLike}°C • ${humidityWord}`;
+
+      // 1. Rain Timing
+      document.getElementById('loc-rain-label').innerText = lang === 'od' ? 'କେତେବେଳେ ବର୍ଷା ହେବ?' : lang === 'hi' ? 'बारिश कब होगी?' : 'WHEN WILL IT RAIN?';
+      document.getElementById('loc-rain-val').innerText = w.rain.summary;
+      document.getElementById('loc-rain-desc').innerText = w.rain.desc;
+
+      // 2. Wind & Cyclone Status
+      document.getElementById('loc-wind-label').innerText = lang === 'od' ? 'ପବନର ବେଗ ଓ ବିପଦ' : lang === 'hi' ? 'हवा की गति एवं खतरा' : 'WIND & CYCLONE STATUS';
+      document.getElementById('loc-wind-val').innerText = w.wind.summary;
+      document.getElementById('loc-wind-desc').innerText = w.wind.desc;
+
+      // Style wind box border based on danger
+      const windBox = document.getElementById('loc-wind-box');
+      if (w.wind.status === 'danger') {
+        windBox.className = 'p-3 rounded-2xl bg-rose-950/40 border border-rose-500/50 flex items-start gap-3';
+      } else if (w.wind.status === 'warning') {
+        windBox.className = 'p-3 rounded-2xl bg-amber-950/40 border border-amber-500/50 flex items-start gap-3';
+      } else {
+        windBox.className = 'p-3 rounded-2xl bg-slate-900/60 border border-slate-700/60 flex items-start gap-3';
+      }
+
+      // 3. Shelter & Road Hazard
+      document.getElementById('loc-shelter-label').innerText = w.shelter.title;
+      document.getElementById('loc-shelter-val').innerText = w.shelter.val;
+      document.getElementById('loc-shelter-desc').innerHTML = w.shelter.desc;
+
+      const shelterBox = document.getElementById('loc-shelter-box');
+      if (w.shelter.isCoastZone && w.shelter.isFlooded) {
+        shelterBox.className = 'p-3 rounded-2xl bg-rose-950/40 border border-rose-500/50 flex items-start gap-3';
+      } else {
+        shelterBox.className = 'p-3 rounded-2xl bg-slate-900/60 border border-slate-700/60 flex items-start gap-3';
+      }
+
+      // 4. Life-Safety Advice (10th Pass Citizen Clarity)
+      document.getElementById('loc-advice-label').innerText = lang === 'od' ? 'ଗାଁ ଲୋକଙ୍କ ପାଇଁ ଜରୁରୀ ପରାମର୍ଶ' : lang === 'hi' ? 'ग्रामीणों के लिए आवश्यक निर्देश' : 'WHAT TO DO RIGHT NOW';
+      if (lang === 'od') {
+        document.getElementById('loc-advice-text').innerHTML = `
+          • <b>ପିଇବା ପାଣି:</b> ପାଣି ଫୁଟାଇ ପିଅନ୍ତୁ; ୩ ଦିନ ପାଇଁ ସଫା ପାତ୍ରରେ ପାଣି ଢାଙ୍କି ରଖନ୍ତୁ।<br>
+          • <b>ମୋବାଇଲ ଓ ଟର୍ଚ୍ଚ:</b> କରେଣ୍ଟ କଟିବା ପୂର୍ବରୁ ଫୋନ୍ ସମ୍ପୂର୍ଣ୍ଣ ଚାର୍ଜ କରନ୍ତୁ।<br>
+          • <b>ଗାଈ ଗୋରୁ:</b> ଗାଈ, ଛେଳିଙ୍କ ଦଉଡ଼ି ଖୋଲି ଉଚ୍ଚା ସ୍କୁଲ ବାରଣ୍ଡାକୁ ନିଅନ୍ତୁ।<br>
+          • <b>ଆଧାର ଓ ଟଙ୍କା:</b> କାଗଜପତ୍ର ପଲିଥିନ୍ ମୁଣାରେ ବାନ୍ଧି ସାଙ୍ଗରେ ରଖନ୍ତୁ।
+        `;
+        document.getElementById('btn-audio-label').innerText = 'ଶୁଣନ୍ତୁ (LISTEN)';
+        document.getElementById('btn-full-adv-label').innerText = 'ସମ୍ପୂର୍ଣ୍ଣ ସରକାରୀ ଆଦେଶ ପଢ଼ନ୍ତୁ';
+      } else if (lang === 'hi') {
+        document.getElementById('loc-advice-text').innerHTML = `
+          • <b>पीने का पानी:</b> पानी उबालकर पिएं; 3 दिन के लिए साफ बर्तन में पानी ढककर रखें।<br>
+          • <b>मोबाइल व टॉर्च:</b> बिजली कटने से पहले मोबाइल व इमरजेंसी लाइट चार्ज कर लें।<br>
+          • <b>मवेशी:</b> गाय-बकरियों को खोलकर ऊंचे स्कूल ग्राउंड में ले जाएं।<br>
+          • <b>दस्तावेज व राशन:</b> आधार कार्ड व सूखा राशन प्लास्टिक थैली में रखें।
+        `;
+        document.getElementById('btn-audio-label').innerText = 'सुनिए (LISTEN)';
+        document.getElementById('btn-full-adv-label').innerText = 'पूर्ण सरकारी निर्देश देखें';
+      } else {
+        document.getElementById('loc-advice-text').innerHTML = `
+          • <b>Drinking Water:</b> Boil drinking water; store 3 days in clean covered pots.<br>
+          • <b>Mobile & Torches:</b> Fully charge mobile phones and emergency lights now.<br>
+          • <b>Cattle & Pets:</b> Untie cows and goats from low sheds; take to high ground.<br>
+          • <b>Documents & Food:</b> Seal identification papers & dry food in plastic bags.
+        `;
+        document.getElementById('btn-audio-label').innerText = 'LISTEN (AUDIO)';
+        document.getElementById('btn-full-adv-label').innerText = 'VIEW OFFICIAL DISPATCH';
+      }
+
+      // Render 24h Hourly Forecast Strip
+      const strip = document.getElementById('loc-hourly-strip');
+      strip.innerHTML = '';
+      w.hourly.forEach(h => {
+        strip.innerHTML += `
+          <div class="flex-shrink-0 p-2.5 rounded-2xl bg-slate-900/80 border border-white/10 text-center w-16">
+            <div class="text-[10px] text-slate-400 font-mono-num">${h.time}</div>
+            <div class="text-xl my-1">${h.icon}</div>
+            <div class="text-[13px] font-bold text-white font-mono-num">${h.temp}°</div>
+            <div class="text-[9px] text-sky-400 font-semibold font-mono-num">${h.rainProb}%</div>
+          </div>
+        `;
+      });
+    }
+
+    function setLang(lang) {
+      currentLang = lang;
+      ['od', 'hi', 'en'].forEach(k => {
+        const btn = document.getElementById(`lbtn-${k}`);
+        const mbtn = document.getElementById(`madv-${k}`);
+        if (btn) btn.className = k === lang ? 'px-2.5 py-0.5 rounded-full bg-sky-600 text-white' : 'px-2 py-0.5 rounded-full text-slate-300 hover:text-white';
+        if (mbtn) mbtn.className = k === lang ? 'px-4 py-1.5 rounded-xl bg-sky-600 text-white text-[12px] font-bold font-sans' : 'px-4 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 text-[12px] font-bold font-sans';
+      });
+
+      // Re-parse with new language strings
+      if (activeLocation.weather && activeLocation.weather.rawHourly) {
+        activeLocation.weather = parseWeatherData({
+          current: {
+            temperature_2m: activeLocation.weather.curTemp,
+            apparent_temperature: activeLocation.weather.feelsLike,
+            wind_speed_10m: activeLocation.weather.curWind,
+            weather_code: 1
+          },
+          hourly: activeLocation.weather.rawHourly
+        }, activeLocation.lat, activeLocation.lon);
+      }
+
+      renderHeroCard();
+      updateInMapWeatherHUD(activeLocation.lat, activeLocation.lon, activeLocation.weather, activeLocation.name);
+      updateModalContent();
+    }
+
+    // Read Aloud via Speech Synthesis
+    function speakCurrentAdvisory() {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+
+      const w = activeLocation.weather;
+      let text = '';
+      let langCode = 'en-IN';
+
+      if (currentLang === 'od') {
+        text = `${activeLocation.name} ରେ ବର୍ତ୍ତମାନ ତାପମାତ୍ରା ${w.curTemp} ଡିଗ୍ରୀ ସେଲସିଅସ। ପବନର ବେଗ ${w.curWind} କିଲୋମିଟର। ${w.rain.summary}। ${w.wind.desc}`;
+        langCode = 'hi-IN';
+      } else if (currentLang === 'hi') {
+        text = `${activeLocation.name} में तापमान ${w.curTemp} डिग्री सेल्सियस है। हवा की गति ${w.curWind} किलोमीटर प्रति घंटा है। ${w.rain.summary}। ${w.wind.desc}`;
+        langCode = 'hi-IN';
+      } else {
+        text = `Weather update for ${activeLocation.name}. Current temperature ${w.curTemp} degrees Celsius. Wind speed ${w.curWind} kilometers per hour. ${w.rain.summary}. ${w.wind.desc}`;
+        langCode = 'en-IN';
+      }
+
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 0.95;
+      utter.lang = langCode;
+      window.speechSynthesis.speak(utter);
+    }
+
+    // =========================================================================
+    // SEARCH ENGINE (Open-Meteo Geocoding for ANY village/town/city)
+    // =========================================================================
+    function handleSearchInput(query) {
+      clearTimeout(searchDebounce);
+      const dropdown = document.getElementById('searchResultsDropdown');
+      if (!query || query.trim().length < 2) {
+        dropdown.classList.add('hidden');
+        return;
+      }
+
+      searchDebounce = setTimeout(async () => {
+        try {
+          const resp = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&language=en&format=json`);
+          const data = await resp.json();
+          if (data && data.results && data.results.length > 0) {
+            dropdown.innerHTML = '';
+            data.results.forEach(r => {
+              const el = document.createElement('div');
+              el.className = 'p-2.5 hover:bg-sky-950/70 rounded-xl cursor-pointer flex items-center justify-between border-b border-white/5 last:border-0 transition-colors';
+              el.onclick = () => {
+                dropdown.classList.add('hidden');
+                document.getElementById('mainSearchInput').value = `${r.name}, ${r.admin1 || ''}`;
+                selectLocation(r.name, r.latitude, r.longitude);
+              };
+              el.innerHTML = `
+                <div>
+                  <div class="text-[12px] font-bold text-white flex items-center gap-1">
+                    <span>📍</span>
+                    <span>${r.name}</span>
+                  </div>
+                  <div class="text-[10px] text-slate-400 font-mono-num">${r.admin1 || ''}, ${r.country || ''}</div>
+                </div>
+                <div class="text-[10px] text-sky-400 font-mono-num">${r.latitude.toFixed(2)}°, ${r.longitude.toFixed(2)}°</div>
+              `;
+              dropdown.appendChild(el);
+            });
+            dropdown.classList.remove('hidden');
+          } else {
+            dropdown.innerHTML = `<div class="p-3 text-[11px] text-slate-400 text-center">No location found. Try "Bangaon", "Puri", "Balasore"...</div>`;
+            dropdown.classList.remove('hidden');
+          }
+        } catch (e) {
+          console.warn('Geocoding search failed:', e);
+        }
+      }, 200);
+    }
+
+    function executeFirstSearch() {
+      const dropdown = document.getElementById('searchResultsDropdown');
+      const first = dropdown.querySelector('div');
+      if (first) first.click();
+    }
+
+    function clearSearch() {
+      document.getElementById('mainSearchInput').value = '';
+      document.getElementById('searchResultsDropdown').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // DYNAMIC NAVIGATION & TIME SCRUBBER (Decoupled & Centered on Searched Town)
+    // =========================================================================
+    function switchAppMode(newMode) {
+      appMode = newMode;
+      const slider = document.getElementById('timeSlider');
+      const label = document.getElementById('timeSliderLabel');
+      const title = document.getElementById('timeSliderTitle');
+
+      if (appMode === 'live') {
+        title.innerText = '24-HR FORECAST:';
+        slider.min = 0;
+        slider.max = 23;
+        slider.value = liveForecastHour;
+        label.innerText = 'Now: Current Live';
+        label.className = 'text-sky-400 font-bold text-[10px] min-w-[140px] text-center';
+      } else {
+        title.innerText = 'FANI TRACK (2019):';
+        slider.min = 0;
+        slider.max = 12;
+        slider.value = 9;
+        label.innerText = 'May 03, 08:30 UTC';
+        label.className = 'text-amber-400 font-bold text-[10px] min-w-[140px] text-center';
+      }
+    }
+
+    function onTimeSlider(val) {
+      const v = parseInt(val, 10);
+      if (appMode === 'live') {
+        liveForecastHour = v;
+        updateLiveForecastScrub(v);
+      } else {
+        const pt = window.PRAHARI_DATA.stormTrack[v];
+        if (!pt) return;
+        document.getElementById('timeSliderLabel').innerText = `${pt.time_label} (${pt.max_wind_kmh} km/h)`;
+        if (map) {
+          map.flyTo({ center: [pt.lon, pt.lat], zoom: Math.max(map.getZoom(), 7.8), duration: 800 });
+        }
+      }
+    }
+
+    function updateLiveForecastScrub(hourIdx) {
+      const w = activeLocation.weather;
+      if (!w || !w.rawHourly) {
+        document.getElementById('timeSliderLabel').innerText = hourIdx === 0 ? 'Now: Current Live' : `+${hourIdx} hours`;
+        return;
+      }
+
+      const h = w.rawHourly;
+      const timeStr = h.time[hourIdx];
+      const temp = Math.round(h.temperature_2m[hourIdx]);
+      const rainProb = h.precipitation_probability ? (h.precipitation_probability[hourIdx] || 0) : 0;
+      const wind = Math.round(h.wind_speed_10m ? (h.wind_speed_10m[hourIdx] || 0) : 0);
+      const code = h.weather_code ? (h.weather_code[hourIdx] || 1) : 1;
+      const cond = getWeatherInfoFromCode(code, currentLang);
+
+      const d = new Date(timeStr);
+      const timeFmt = isNaN(d.getTime()) ? (hourIdx === 0 ? 'Now' : `+${hourIdx}h`) :
+                      (hourIdx === 0 ? 'Now' : d.toLocaleTimeString([], { hour: 'numeric', hour12: true }));
+
+      document.getElementById('timeSliderLabel').innerText = `${timeFmt}: ${temp}°C • 🌧️ ${rainProb}% • 💨 ${wind} km/h`;
+
+      // Scrub in-map HUD
+      const scrubbedWeather = Object.assign({}, w, {
+        curTemp: temp,
+        curWind: wind,
+        icon: cond.icon,
+        conditionText: cond.text,
+        wind: getWindInfo(wind, currentLang)
+      });
+      updateInMapWeatherHUD(activeLocation.lat, activeLocation.lon, scrubbedWeather, activeLocation.name);
+      document.getElementById('loc-temp').innerText = `${temp}°`;
+      document.getElementById('loc-icon').innerText = cond.icon;
+      document.getElementById('loc-condition').innerText = cond.text;
+    }
+
+    function toggleTrackPlay() {
+      isPlaying = !isPlaying;
+      const btn = document.getElementById('playBtn');
+      if (isPlaying) {
+        btn.innerText = '⏸';
+        playInterval = setInterval(() => {
+          const slider = document.getElementById('timeSlider');
+          const maxVal = appMode === 'live' ? 23 : 12;
+          let nextVal = parseInt(slider.value, 10) + 1;
+          if (nextVal > maxVal) nextVal = 0;
+          slider.value = nextVal;
+          onTimeSlider(nextVal);
+        }, 1200);
+      } else {
+        btn.innerText = '▶';
+        clearInterval(playInterval);
+      }
+    }
+
+    // Dynamic Navigation Actions
+    function flyToCurrentLocation() {
+      updateNavigationActiveButton('btn-focus');
+      if (map) {
+        map.flyTo({
+          center: [activeLocation.lon, activeLocation.lat],
+          zoom: 12.8,
+          pitch: 35,
+          bearing: 15,
+          duration: 1600
+        });
+      }
+    }
+
+    function zoomToLevel(level) {
+      updateNavigationActiveButton(`btn-${level}`);
+      if (!map) return;
+
+      if (level === 'area') {
+        map.flyTo({
+          center: [activeLocation.lon, activeLocation.lat],
+          zoom: 9.8,
+          pitch: 20,
+          bearing: 0,
+          duration: 1600
+        });
+      } else if (level === 'street') {
+        map.flyTo({
+          center: [activeLocation.lon, activeLocation.lat],
+          zoom: 16.8,
+          pitch: 52,
+          bearing: 25,
+          duration: 1800
+        });
+      } else if (level === 'orbit') {
+        map.flyTo({
+          center: [activeLocation.lon, activeLocation.lat],
+          zoom: 2.2,
+          pitch: 0,
+          bearing: 0,
+          duration: 2200
+        });
+      }
+    }
+
+    function activateCycloneFaniMode() {
+      updateNavigationActiveButton('btn-fani-mode');
+      switchAppMode('fani');
+
+      // Fly to Odisha Bay of Bengal Fani landfall zone
+      map.flyTo({
+        center: [85.836, 19.878],
+        zoom: 7.8,
+        pitch: 30,
+        bearing: -15,
+        duration: 2000
+      });
+
+      // Switch location hero to Puri Category-4
+      selectLocation('Puri Coast (Fani Eye)', 19.805, 85.830);
+    }
+
+    function updateNavigationActiveButton(activeId) {
+      const btnIds = ['btn-focus', 'btn-area', 'btn-street', 'btn-fani-mode', 'btn-orbit'];
+      btnIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          const isActive = id === activeId;
+          el.classList.toggle('active', isActive);
+          el.classList.toggle('text-white', isActive);
+          el.classList.toggle('text-slate-300', !isActive);
+        }
+      });
+    }
+
+    function switchBasemap(type) {
+      currentBasemap = type;
+      ['esri', 'nasa', 'osm'].forEach(k => {
+        const btn = document.getElementById(`btn-basemap-${k}`);
+        if (btn) btn.classList.toggle('active', k === type);
+      });
+
+      let sourceId = 'esri-satellite';
+      if (type === 'nasa') sourceId = 'nasa-fani';
+      if (type === 'osm') sourceId = 'osm-streets';
+
+      if (map && map.getLayer('base-raster')) {
+        map.removeLayer('base-raster');
+        const beforeLayer = map.getLayer('rainviewer-radar-layer') ? 'rainviewer-radar-layer' :
+                           (map.getLayer('flood-zones-fill') ? 'flood-zones-fill' : undefined);
+        map.addLayer({
+          id: 'base-raster',
+          type: 'raster',
+          source: sourceId,
+          paint: { 'raster-opacity': 1.0 }
+        }, beforeLayer);
+      }
+    }
+
+    // Modal controls
+    function openTrilingualAdvisoryModal() {
+      document.getElementById('advisoryModal').classList.remove('hidden');
+      updateModalContent();
+    }
+
+    function closeTrilingualAdvisoryModal() {
+      document.getElementById('advisoryModal').classList.add('hidden');
+    }
+
+    function updateModalContent() {
+      const adv = (window.PRAHARI_DATA && window.PRAHARI_DATA.advisories) ? window.PRAHARI_DATA.advisories[0] : null;
+      if (!adv) return;
+      const data = adv[currentLang];
+      if (!data) return;
+
+      document.getElementById('madv-title').innerText = data.title;
+      document.getElementById('madv-body').innerText = data.body;
+      document.getElementById('madv-action').innerText = data.action;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      setTransparency(90);
+    });
+
+    window.addEventListener('resize', () => {
+      if (map) map.resize();
+    });
+  </script>
+</body>
+</html>
