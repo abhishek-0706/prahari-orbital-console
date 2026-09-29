@@ -363,6 +363,12 @@
         <span id="radarBtnText">Radar: ON</span>
       </button>
 
+      <!-- Google Earth Engine Live Layer Toggle -->
+      <button onclick="toggleGEELayer()" oncontextmenu="event.preventDefault();configureGEE();" title="Left-click: toggle · Right-click: configure tile URL" class="google-chip px-3 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1 text-emerald-300" id="btn-toggle-gee">
+        <span>🌍</span>
+        <span id="geeBtnText">GEE: OFF</span>
+      </button>
+
       <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
 
       <!-- Basemap Switchers -->
@@ -420,6 +426,77 @@
 
       <div class="flex justify-end gap-2 pt-1">
         <button onclick="closeTrilingualAdvisoryModal()" class="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold uppercase tracking-wider">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 5B. PRAHARI AI ADVISOR — Gemini Flash Conversational Agent                -->
+  <!-- ========================================================================= -->
+
+  <!-- Floating launcher -->
+  <button id="aiLauncher" onclick="toggleAIPanel()"
+    class="fixed bottom-6 right-6 z-40 google-card rounded-full pl-3 pr-4 py-2.5 flex items-center gap-2.5 shadow-2xl hover:scale-105 transition-transform pointer-events-auto border border-sky-500/50">
+    <span class="relative flex h-7 w-7 items-center justify-center rounded-full bg-sky-600 text-white text-sm">🛰️
+      <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+      </span>
+    </span>
+    <span class="text-[12px] font-bold text-white tracking-wide">Ask PRAHARI AI</span>
+  </button>
+
+  <!-- Chat panel -->
+  <div id="aiPanel"
+    class="fixed bottom-6 right-6 z-40 w-[400px] max-w-[calc(100vw-3rem)] h-[560px] max-h-[calc(100vh-3rem)] google-card card-pinned rounded-3xl shadow-2xl pointer-events-auto flex flex-col overflow-hidden hidden">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-950/60">
+      <div class="flex items-center gap-2.5">
+        <span class="h-8 w-8 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white text-sm shadow-lg">🛰️</span>
+        <div>
+          <div class="text-[13px] font-extrabold text-white leading-tight">PRAHARI AI Advisor</div>
+          <div class="text-[9px] text-sky-400 font-mono-num tracking-wide flex items-center gap-1">
+            <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Gemini Flash · Disaster Intelligence
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-1">
+        <button onclick="toggleAISettings()" title="Settings" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs">⚙️</button>
+        <button onclick="toggleAIPanel()" title="Close" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs font-bold">✕</button>
+      </div>
+    </div>
+
+    <!-- Settings drawer -->
+    <div id="aiSettings" class="hidden px-4 py-3 border-b border-white/10 bg-slate-950/80 space-y-2">
+      <div class="text-[10px] uppercase font-bold text-sky-400 tracking-wider">Gemini API Key</div>
+      <input id="aiKeyInput" type="password" placeholder="Paste your Google AI Studio API key"
+        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-[12px] text-white focus:border-sky-500 outline-none" />
+      <div class="flex items-center gap-2">
+        <input id="aiModelInput" type="text" placeholder="gemini-3.5-flash-lite"
+          class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-[11px] text-slate-300 font-mono-num focus:border-sky-500 outline-none" />
+        <button onclick="saveAISettings()" class="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold">Save</button>
+      </div>
+      <div class="text-[10px] text-slate-500 leading-snug">Get a free key at <span class="text-sky-400">aistudio.google.com/apikey</span>. Stored only in this browser (localStorage) — never uploaded or committed.</div>
+    </div>
+
+    <!-- Messages -->
+    <div id="aiMessages" class="flex-1 overflow-y-auto px-4 py-3 space-y-3"></div>
+
+    <!-- Suggested prompts -->
+    <div id="aiSuggestions" class="px-3 pb-1.5 flex flex-wrap gap-1.5"></div>
+
+    <!-- Input -->
+    <div class="px-3 py-3 border-t border-white/10 bg-slate-950/60">
+      <div class="flex items-end gap-2">
+        <textarea id="aiInput" rows="1" placeholder="Ask about wards, shelters, surge, evacuation…"
+          class="flex-1 resize-none bg-slate-900 border border-slate-700 rounded-2xl px-3.5 py-2.5 text-[12px] text-white focus:border-sky-500 outline-none max-h-24"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIMessage();}"
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,96)+'px';"></textarea>
+        <button id="aiSendBtn" onclick="sendAIMessage()"
+          class="h-10 w-10 shrink-0 rounded-full bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white flex items-center justify-center shadow-lg">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
       </div>
     </div>
   </div>
@@ -690,6 +767,76 @@
       }
       if (btn) btn.classList.toggle('active', radarVisible);
       if (txt) txt.innerText = radarVisible ? 'Radar: ON' : 'Radar: OFF';
+    }
+
+    // ---- Google Earth Engine live overlay ----
+    // Consumes an XYZ tile URL produced by ee.data.getMapId() (see gee/prahari_gee.js),
+    // or a Cloud Run tile-proxy endpoint (see gee/tile_proxy/). No mock data — if no URL
+    // is configured, the layer simply stays off.
+    const GEE_URL_STORE = 'prahari_gee_tileurl';
+    let geeVisible = false;
+
+    function getGEEUrl() { return localStorage.getItem(GEE_URL_STORE) || ''; }
+
+    function configureGEE() {
+      const current = getGEEUrl();
+      const url = window.prompt(
+        'Paste the Google Earth Engine tile URL (from ee.data.getMapId, must contain {z}/{x}/{y}):',
+        current
+      );
+      if (url === null) return; // cancelled
+      const trimmed = url.trim();
+      if (trimmed && !/\{z\}.*\{x\}.*\{y\}/.test(trimmed)) {
+        alert('That URL is missing the {z}/{x}/{y} tile placeholders. Copy the full mapid tile URL printed by the GEE script.');
+        return;
+      }
+      localStorage.setItem(GEE_URL_STORE, trimmed);
+      if (trimmed) { geeVisible = true; applyGEELayer(); }
+      else { geeVisible = false; removeGEELayer(); }
+      updateGEEButton();
+    }
+
+    function removeGEELayer() {
+      if (!map) return;
+      if (map.getLayer('gee-live-layer')) map.removeLayer('gee-live-layer');
+      if (map.getSource('gee-live-src')) map.removeSource('gee-live-src');
+    }
+
+    function applyGEELayer() {
+      const url = getGEEUrl();
+      if (!map || !url) return;
+      removeGEELayer();
+      map.addSource('gee-live-src', {
+        type: 'raster',
+        tiles: [url],
+        tileSize: 256,
+        attribution: '© Google Earth Engine'
+      });
+      // place beneath the analytic vector layers so wards/flood/routes stay on top
+      const before = map.getLayer('flood-zones-fill') ? 'flood-zones-fill' : undefined;
+      map.addLayer({
+        id: 'gee-live-layer',
+        type: 'raster',
+        source: 'gee-live-src',
+        paint: { 'raster-opacity': geeVisible ? 0.82 : 0.0, 'raster-fade-duration': 300 }
+      }, before);
+    }
+
+    function updateGEEButton() {
+      const btn = document.getElementById('btn-toggle-gee');
+      const txt = document.getElementById('geeBtnText');
+      if (btn) btn.classList.toggle('active', geeVisible);
+      if (txt) txt.innerText = geeVisible ? 'GEE: ON' : 'GEE: OFF';
+    }
+
+    function toggleGEELayer() {
+      if (!getGEEUrl()) { configureGEE(); return; }
+      geeVisible = !geeVisible;
+      if (geeVisible && !(map && map.getLayer('gee-live-layer'))) applyGEELayer();
+      else if (map && map.getLayer('gee-live-layer')) {
+        map.setPaintProperty('gee-live-layer', 'raster-opacity', geeVisible ? 0.82 : 0.0);
+      }
+      updateGEEButton();
     }
 
     // CLICK ANYWHERE ON MAP TO SELECT LOCATION
@@ -1710,6 +1857,260 @@
     window.addEventListener('resize', () => {
       if (map) map.resize();
     });
+  </script>
+
+  <!-- ========================================================================= -->
+  <!-- 7. PRAHARI AI ADVISOR — Gemini Flash Agent Logic                          -->
+  <!-- ========================================================================= -->
+  <script>
+    const AI_KEY_STORE = 'prahari_gemini_key';
+    const AI_MODEL_STORE = 'prahari_gemini_model';
+    const AI_DEFAULT_MODEL = 'gemini-3.5-flash-lite'; // set a different Gemini id in ⚙️ settings if needed
+    let aiHistory = [];   // [{role:'user'|'model', text}]
+    let aiBusy = false;
+
+    function getAIKey()   { return localStorage.getItem(AI_KEY_STORE) || ''; }
+    function getAIModel() { return localStorage.getItem(AI_MODEL_STORE) || AI_DEFAULT_MODEL; }
+
+    function toggleAIPanel() {
+      const panel = document.getElementById('aiPanel');
+      const launcher = document.getElementById('aiLauncher');
+      const opening = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !opening);
+      launcher.classList.toggle('hidden', opening);
+      if (opening) {
+        if (aiHistory.length === 0) seedAIWelcome();
+        renderAISuggestions();
+        if (!getAIKey()) document.getElementById('aiSettings').classList.remove('hidden');
+        setTimeout(() => document.getElementById('aiInput').focus(), 120);
+      }
+    }
+
+    function toggleAISettings() {
+      const s = document.getElementById('aiSettings');
+      s.classList.toggle('hidden');
+      if (!s.classList.contains('hidden')) {
+        document.getElementById('aiKeyInput').value = getAIKey();
+        document.getElementById('aiModelInput').value = getAIModel();
+      }
+    }
+
+    function saveAISettings() {
+      const k = document.getElementById('aiKeyInput').value.trim();
+      const m = document.getElementById('aiModelInput').value.trim() || AI_DEFAULT_MODEL;
+      if (k) localStorage.setItem(AI_KEY_STORE, k);
+      localStorage.setItem(AI_MODEL_STORE, m);
+      document.getElementById('aiSettings').classList.add('hidden');
+      appendAIBubble('model', k ? '✅ Connected to ' + m + '. Ask me anything about the current situation.' : '⚠️ No key saved — I need a Gemini API key to respond.');
+    }
+
+    // ---- Grounding: build a compact live context from the real PRAHARI data ----
+    function buildPrahariContext() {
+      const D = window.PRAHARI_DATA || {};
+      const lines = [];
+      // Active view
+      try {
+        lines.push(`CURRENT VIEW: focus="${activeLocation.name}" (${activeLocation.lat.toFixed(3)}N, ${activeLocation.lon.toFixed(3)}E), mode=${appMode}, ui_language=${currentLang}.`);
+      } catch (e) {}
+      // Storm
+      if (D.stormTrack && D.stormTrack.length) {
+        const peak = D.stormTrack.reduce((a, b) => (b.max_wind_kmh > a.max_wind_kmh ? b : a));
+        const last = D.stormTrack[D.stormTrack.length - 1];
+        lines.push(`STORM: ${peak.storm_name} — ${D.stormTrack.length} best-track waypoints. Peak intensity ${peak.max_wind_kmh} km/h @ ${peak.central_pressure_hPa} hPa (${peak.category}). Landfall approx ${last.lat}N ${last.lon}E.`);
+      }
+      // Wards
+      if (D.puriWards && D.puriWards.features) {
+        lines.push('WARDS (vulnerability 0-100):');
+        D.puriWards.features.forEach(f => {
+          const p = f.properties;
+          lines.push(`  - ${p.ward_id} ${p.ward_name}: score ${p.score}/100 (${p.tier}), pop ${p.population}, shelter_route_exposed=${p.shelter_route_exposed}. ${p.notes || ''}`);
+        });
+      }
+      // Infrastructure
+      if (D.infrastructure && D.infrastructure.features) {
+        lines.push('CRITICAL INFRASTRUCTURE:');
+        D.infrastructure.features.forEach(f => {
+          const p = f.properties || {};
+          const bits = [
+            `${p.kind || 'asset'} ${p.id || ''} "${p.name || ''}"`,
+            p.status ? 'status=' + p.status : '',
+            p.capacity != null ? 'cap=' + p.capacity : '',
+            p.elev_m != null ? 'elev=' + p.elev_m + 'm' : '',
+            p.route_exposed != null ? 'route_exposed=' + p.route_exposed : ''
+          ].filter(Boolean);
+          lines.push('  - ' + bits.join(', '));
+        });
+      }
+      // Evacuation routes
+      if (D.evacuationRoutes && D.evacuationRoutes.features) {
+        lines.push('EVACUATION ROUTES:');
+        D.evacuationRoutes.features.forEach(f => {
+          const p = f.properties || {};
+          const bits = [
+            `${p.id || ''} "${p.name || 'route'}"`,
+            p.status ? p.status : '',
+            p.hazard_depth_m != null ? 'hazard_depth=' + p.hazard_depth_m + 'm' : ''
+          ].filter(Boolean);
+          lines.push('  - ' + bits.join(', '));
+        });
+      }
+      // Flood zones
+      if (D.floodZones && D.floodZones.features) {
+        lines.push(`FLOOD ZONES: ${D.floodZones.features.length} inundation polygons (Holland surge model, peak 3.8m; SAR-verified 71% IoU).`);
+      }
+      return lines.join('\n');
+    }
+
+    function systemPrompt() {
+      const langName = { od: 'Odia', hi: 'Hindi', en: 'English' }[currentLang] || 'English';
+      return [
+        'You are the PRAHARI AI Advisor, a disaster-management assistant embedded in an aerospace orbital GIS console for cyclone response in coastal Odisha, India.',
+        'You help municipal and disaster-management authorities with anticipatory action: evacuation planning, infrastructure exposure, storm-surge risk, and early-warning advisories.',
+        'Answer ONLY from the LIVE DATA below when the user asks about wards, shelters, surge, routes, or the storm. Be specific — cite ward IDs, scores, capacities, and surge depths. If data is missing, say so plainly; never invent numbers.',
+        'Be concise and action-oriented (short paragraphs or tight bullet points). Prioritise life-safety guidance.',
+        `The operator\'s UI is currently set to ${langName}. If they write in Odia or Hindi, reply in that language; otherwise reply in English.`,
+        '',
+        '=== LIVE PRAHARI DATA ===',
+        buildPrahariContext()
+      ].join('\n');
+    }
+
+    // ---- Rendering ----
+    function appendAIBubble(role, text) {
+      const wrap = document.getElementById('aiMessages');
+      const row = document.createElement('div');
+      row.className = 'flex ' + (role === 'user' ? 'justify-end' : 'justify-start');
+      const b = document.createElement('div');
+      b.className = role === 'user'
+        ? 'max-w-[82%] bg-sky-600 text-white rounded-2xl rounded-br-sm px-3.5 py-2 text-[12.5px] leading-relaxed whitespace-pre-wrap'
+        : 'max-w-[85%] bg-slate-800/80 border border-white/10 text-slate-100 rounded-2xl rounded-bl-sm px-3.5 py-2 text-[12.5px] leading-relaxed whitespace-pre-wrap';
+      b.textContent = text;
+      row.appendChild(b);
+      wrap.appendChild(row);
+      wrap.scrollTop = wrap.scrollHeight;
+      return b;
+    }
+
+    function seedAIWelcome() {
+      appendAIBubble('model', 'Namaskar 🙏 I\'m the PRAHARI AI Advisor. I can read the live cyclone, ward, surge and shelter data on screen. Ask me things like the examples below.');
+    }
+
+    function renderAISuggestions() {
+      const chips = [
+        'Which wards are most at risk?',
+        'Are the cyclone shelters safe to use?',
+        'Draft an evacuation advisory for Ward 1',
+        'Which roads are severed?'
+      ];
+      const box = document.getElementById('aiSuggestions');
+      box.innerHTML = '';
+      chips.forEach(c => {
+        const b = document.createElement('button');
+        b.className = 'google-chip px-2.5 py-1 rounded-full text-[10.5px] text-slate-300 hover:text-white';
+        b.textContent = c;
+        b.onclick = () => { document.getElementById('aiInput').value = c; sendAIMessage(); };
+        box.appendChild(b);
+      });
+    }
+
+    // ---- Gemini call ----
+    async function sendAIMessage() {
+      if (aiBusy) return;
+      const input = document.getElementById('aiInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      if (!getAIKey()) {
+        appendAIBubble('model', '⚠️ Please add your Gemini API key in ⚙️ Settings first (free at aistudio.google.com/apikey).');
+        document.getElementById('aiSettings').classList.remove('hidden');
+        return;
+      }
+
+      input.value = '';
+      input.style.height = 'auto';
+      document.getElementById('aiSuggestions').innerHTML = '';
+      appendAIBubble('user', text);
+      aiHistory.push({ role: 'user', text });
+
+      aiBusy = true;
+      document.getElementById('aiSendBtn').disabled = true;
+      const thinking = appendAIBubble('model', '● ● ●');
+      thinking.classList.add('animate-pulse');
+
+      try {
+        const model = getAIModel();
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(getAIKey())}`;
+        const body = {
+          system_instruction: { parts: [{ text: systemPrompt() }] },
+          contents: aiHistory.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+          generationConfig: {
+            temperature: 0.6,
+            maxOutputTokens: 1024,
+            topP: 0.95,
+            thinkingConfig: { thinkingLevel: 'MINIMAL' }
+          }
+        };
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+          let msg = 'HTTP ' + res.status;
+          try { const e = await res.json(); if (e && e.error && e.error.message) msg = e.error.message; } catch (_) {}
+          throw new Error(msg);
+        }
+
+        const wrap = document.getElementById('aiMessages');
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '', full = '', finish = '';
+        thinking.classList.remove('animate-pulse');
+        thinking.textContent = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let nl;
+          while ((nl = buffer.indexOf('\n')) >= 0) {
+            const line = buffer.slice(0, nl).trim();
+            buffer = buffer.slice(nl + 1);
+            if (!line.startsWith('data:')) continue;
+            const payload = line.slice(5).trim();
+            if (!payload || payload === '[DONE]') continue;
+            try {
+              const obj = JSON.parse(payload);
+              const cand = obj.candidates && obj.candidates[0];
+              if (cand) {
+                if (cand.finishReason) finish = cand.finishReason;
+                const parts = cand.content && cand.content.parts;
+                if (parts) {
+                  full += parts.map(p => p.text || '').join('');
+                  thinking.textContent = full;
+                  wrap.scrollTop = wrap.scrollHeight;
+                }
+              }
+            } catch (_) { /* partial/non-JSON keep-alive line */ }
+          }
+        }
+
+        full = full.trim();
+        if (full) {
+          thinking.textContent = full;
+          aiHistory.push({ role: 'model', text: full });
+        } else {
+          thinking.textContent = '⚠️ No response returned' + (finish ? ' (' + finish + ')' : '') + '.';
+        }
+      } catch (err) {
+        thinking.classList.remove('animate-pulse');
+        thinking.textContent = '⚠️ ' + err.message + '\n\nCheck your API key / model id in ⚙️ Settings.';
+      } finally {
+        aiBusy = false;
+        document.getElementById('aiSendBtn').disabled = false;
+        document.getElementById('aiMessages').scrollTop = document.getElementById('aiMessages').scrollHeight;
+      }
+    }
   </script>
 </body>
 </html>

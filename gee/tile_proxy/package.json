@@ -1,0 +1,16 @@
+{
+  "name": "prahari-gee-proxy",
+  "version": "1.0.0",
+  "description": "GEE live-tile proxy for the PRAHARI Orbital Console",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@google/earthengine": "^1.5.0",
+    "express": "^4.19.2"
+  }
+}

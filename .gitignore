@@ -1,0 +1,7 @@
+.vercel/
+node_modules/
+gee/tile_proxy/node_modules/
+gee/tile_proxy/service-account.json
+*.log
+__pycache__/
+*.pyc
