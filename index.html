@@ -569,7 +569,7 @@
               type: 'raster',
               tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
               tileSize: 256,
-              maxzoom: 19,
+              maxzoom: 18,
               attribution: '© ESRI World Imagery'
             },
             'osm-streets': {
@@ -743,6 +743,7 @@
         type: 'raster',
         tiles: [tileUrl],
         tileSize: 256,
+        maxzoom: 10,
         attribution: '© RainViewer Radar'
       });
 
