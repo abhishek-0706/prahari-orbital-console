@@ -9,6 +9,15 @@ optional live **Google Earth Engine** hazard layers.
 
 **🌐 Live app:** https://prahari-orbital-console.vercel.app
 
+## Highlights
+
+- **Real Google Earth Engine, not stock imagery** — live Sentinel-1 SAR flood + Copernicus DEM surge overlays.
+- **An AI advisor that never guesses** — Gemini reads the live on-screen data and answers only from it (real ward IDs, scores, shelter status).
+- **Orbit to sub-meter in one continuous view** — a 3D globe down to individual rooftops, no blurriness.
+- **Zero mockups** — every layer is real Cyclone Fani data; modelled flood extent is SAR-verified at 71% IoU.
+- **Two users, one platform** — a disaster officer works in English; a farmer gets the same intelligence in Odia.
+- **No backend to run** — pure static site, deploys anywhere, with offline-ready SMS advisories.
+
 ---
 
 ## Why this exists
@@ -72,6 +81,7 @@ the on-screen data.
 | 3D globe | Three.js |
 | AI advisor | Google Gemini (`gemini-3.5-flash-lite`), client-side streaming |
 | Hazard analysis | Google Earth Engine (Sentinel-1 SAR, Copernicus DEM, WorldPop, GPM IMERG) |
+| Live weather | Open-Meteo (forecast) + RainViewer (precipitation radar) |
 | Imagery | ESRI World Imagery, NASA GIBS, OpenStreetMap |
 | Deploy | Pure static HTML/CSS/JS — no backend, hosts on any CDN |
 
@@ -127,6 +137,7 @@ vercel --prod          # (this project is live on Vercel)
 
 IMD best-track & post-storm reports · Government of Odisha / OSDMA situation reports ·
 Sentinel-1 SAR, Copernicus DEM, WorldPop, GPM IMERG (via Google Earth Engine) ·
+Open-Meteo (real-time weather forecast) · RainViewer (live precipitation radar) ·
 ESRI World Imagery · NASA GIBS · OpenStreetMap.
 
 Cost/impact framing in the deck is illustrative; cyclone parameters and fatality figures are widely
