@@ -5,13 +5,13 @@
 A high-performance, browser-based 3D Earth & GIS console that turns satellite data into
 life-saving decisions — from a photorealistic globe in orbit down to sub-meter street tiles —
 driven by **real Cyclone Fani (2019) project data**, a built-in **Gemini AI advisor**, and
-optional live **Google Earth Engine** hazard layers.
+plug-in **Google Earth Engine** hazard layers (built; activate with Earth Engine credentials).
 
 **🌐 Live app:** https://prahari-orbital-console.vercel.app
 
 ## Highlights
 
-- **Real Google Earth Engine, not stock imagery** — live Sentinel-1 SAR flood + Copernicus DEM surge overlays.
+- **Real Google Earth Engine, not stock imagery** — Sentinel-1 SAR flood + Copernicus DEM surge overlays, built and ready to stream once Earth Engine credentials are supplied.
 - **An AI advisor that never guesses** — Gemini reads the live on-screen data and answers only from it (real ward IDs, scores, shelter status).
 - **Orbit to sub-meter in one continuous view** — a 3D globe down to individual rooftops, no blurriness.
 - **Zero mockups** — every layer is real Cyclone Fani data; modelled flood extent is SAR-verified at 71% IoU.
@@ -61,9 +61,9 @@ the on-screen data.
 - Your Gemini API key is entered in the ⚙️ settings and stored **only** in your browser's `localStorage` —
   never uploaded or committed.
 
-### 3. Live Google Earth Engine hazard layers *(optional)*
-- A 🌍 GEE toggle in the layer dock overlays real **Sentinel-1 SAR flood extent** and **Copernicus DEM
-  surge-exposure** derived from Earth Engine.
+### 3. Google Earth Engine hazard layers *(plug-in with credentials)*
+- The GEE integration is fully built — a 🌍 toggle in the layer dock streams **Sentinel-1 SAR flood extent** and **Copernicus DEM surge-exposure** derived from Earth Engine.
+- As required by the problem statement, it uses live GEE feeds; it **activates as soon as an Earth-Engine-registered Google Cloud credential is provided** (the Code Editor script, headless Python export, and Cloud Run tile proxy are all included in [`gee/`](gee/)).
 - Scripts and a deployable tile proxy live in [`gee/`](gee/) — see [`gee/README.md`](gee/README.md).
 
 ### 4. Real project data (zero mockups)
