@@ -101,9 +101,401 @@
       background: rgba(255, 255, 255, 0.3);
       border-radius: 2px;
     }
-  </style>
+  
+/* ══ PRAHARI Role-Splash & Brand System ══════════════════════════════════════ */
+
+#role-splash {
+  position: fixed; inset: 0; z-index: 9999;
+  background: radial-gradient(ellipse 120% 100% at 50% 0%, #071528 0%, #040D1A 55%, #000000 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  overflow: hidden; transition: opacity 0.6s ease, transform 0.6s ease;
+}
+#role-splash.exit { opacity: 0; pointer-events: none; transform: scale(1.04); }
+
+.radar-ring {
+  position: absolute; border-radius: 50%;
+  border: 1.5px solid rgba(56,189,248,0.18);
+  animation: radar-expand 4s ease-out infinite;
+  left: 50%; top: 42%; transform: translate(-50%, -50%);
+}
+.radar-ring:nth-child(1) { width:160px; height:160px; animation-delay:0s; }
+.radar-ring:nth-child(2) { width:300px; height:300px; animation-delay:1s; }
+.radar-ring:nth-child(3) { width:460px; height:460px; animation-delay:2s; }
+.radar-ring:nth-child(4) { width:640px; height:640px; animation-delay:3s; }
+.radar-ring:nth-child(5) { width:840px; height:840px; animation-delay:0.5s; border-color:rgba(56,189,248,0.06); }
+@keyframes radar-expand {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+.radar-sweep {
+  position: absolute; width: 300px; height: 300px; border-radius: 50%;
+  left: 50%; top: 42%; transform: translate(-50%, -50%);
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(56,189,248,0.10) 45deg, transparent 65deg);
+  animation: radar-rotate 6s linear infinite;
+  pointer-events: none;
+}
+@keyframes radar-rotate { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+@keyframes float-up {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.6); }
+  20%  { opacity: 0.6; }
+  80%  { opacity: 0.3; }
+  100% { opacity: 0; transform: translateY(-70px) scale(1.1); }
+}
+.splash-particle {
+  position: absolute; border-radius: 50%;
+  background: rgba(56,189,248,0.55);
+  animation: float-up linear infinite;
+  pointer-events: none;
+}
+
+.splash-logo-wrap {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  margin-bottom: 32px;
+}
+.splash-logo-svg { filter: drop-shadow(0 0 32px rgba(56,189,248,0.55)); }
+.splash-brand-name {
+  font-size: 46px; font-weight: 900; letter-spacing: 8px; text-transform: uppercase;
+  background: linear-gradient(135deg, #7DD3FC 0%, #38BDF8 35%, #818CF8 65%, #F59E0B 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+.splash-tagline {
+  font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+  color: rgba(148,163,184,0.75); font-weight: 600;
+}
+.splash-divider {
+  width: 56px; height: 2px; border-radius: 1px;
+  background: linear-gradient(90deg, transparent, #38BDF8, transparent);
+  margin: 2px auto;
+}
+.splash-odia { font-size: 13px; color: rgba(99,179,237,0.8); letter-spacing: 1.2px; font-weight: 500; }
+
+.role-grid {
+  position: relative; z-index: 1;
+  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+  max-width: 880px; padding: 0 16px;
+}
+.role-card {
+  flex: 1 1 240px; max-width: 265px;
+  background: rgba(255,255,255,0.035);
+  border: 1.5px solid rgba(255,255,255,0.09);
+  border-radius: 22px; padding: 26px 20px 22px;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: transform 0.28s cubic-bezier(0.16,1,0.3,1),
+              background 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+  text-align: center; backdrop-filter: blur(14px);
+}
+.role-card::before {
+  content:''; position:absolute; inset:0; border-radius:inherit;
+  background: var(--role-glow, rgba(56,189,248,0.06));
+  opacity: 0; transition: opacity 0.28s;
+}
+.role-card:hover { transform: translateY(-8px) scale(1.025); }
+.role-card:hover::before { opacity: 1; }
+.role-card:hover {
+  border-color: var(--role-color, #38BDF8) !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 32px var(--role-shadow, rgba(56,189,248,0.2));
+}
+.role-card:active { transform: translateY(-4px) scale(0.99); }
+
+.role-icon-wrap {
+  width: 68px; height: 68px; border-radius: 18px; margin: 0 auto 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--role-icon-bg, rgba(56,189,248,0.10));
+  border: 1.5px solid var(--role-color, rgba(56,189,248,0.28));
+  box-shadow: 0 8px 22px var(--role-shadow, rgba(56,189,248,0.14));
+  transition: box-shadow 0.28s;
+}
+.role-card:hover .role-icon-wrap { box-shadow: 0 14px 34px var(--role-shadow, rgba(56,189,248,0.3)); }
+.role-title { font-size: 15px; font-weight: 800; color: #f8fafc; letter-spacing: 0.3px; margin-bottom: 3px; }
+.role-subtitle {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--role-color, #38BDF8); margin-bottom: 11px;
+}
+.role-desc { font-size: 11.5px; color: rgba(148,163,184,0.82); line-height: 1.55; margin-bottom: 14px; }
+.role-features { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+.role-feat { font-size: 10.5px; color: rgba(203,213,225,0.78); display: flex; align-items: center; gap: 7px; }
+.role-feat-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink:0; background: var(--role-color, #38BDF8); opacity: 0.8; }
+.role-cta {
+  margin-top: 16px; width: 100%; padding: 10px;
+  border-radius: 11px; border: 1.5px solid var(--role-color, rgba(56,189,248,0.4));
+  background: var(--role-icon-bg, rgba(56,189,248,0.07));
+  color: var(--role-color, #38BDF8); font-size: 11.5px; font-weight: 800;
+  letter-spacing: 0.6px; cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.role-cta:hover { background: rgba(56,189,248,0.18); box-shadow: 0 4px 18px var(--role-shadow, rgba(56,189,248,0.22)); }
+.splash-footer {
+  position: relative; z-index: 1; margin-top: 24px;
+  font-size: 9.5px; color: rgba(100,116,139,0.6); text-align: center; letter-spacing: 0.6px; line-height: 1.7;
+}
+
+#role-badge {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 11px 4px 8px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+  cursor: pointer; transition: all 0.2s;
+  border: 1.5px solid var(--rb-color, rgba(56,189,248,0.5));
+  background: rgba(0,0,0,0.4); color: var(--rb-color, #38BDF8);
+  backdrop-filter: blur(8px); white-space: nowrap;
+}
+#role-badge:hover { background: rgba(255,255,255,0.07); }
+#role-badge .rb-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--rb-color, #38BDF8);
+  box-shadow: 0 0 7px var(--rb-color, #38BDF8);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+body.role-responder #locationHeroCard { border-color: rgba(245,158,11,0.25) !important; }
+body.role-admin     #locationHeroCard { border-color: rgba(167,139,250,0.25) !important; }
+
+#responder-panel {
+  position: absolute; top: 80px; left: 6px; z-index: 20;
+  width: 310px; max-height: calc(100vh - 140px); overflow-y: auto;
+  display: none; pointer-events: auto;
+}
+body.role-responder #responder-panel { display: block; }
+
+#admin-panel {
+  position: absolute; top: 80px; left: 6px; z-index: 20;
+  width: 330px; max-height: calc(100vh - 140px); overflow-y: auto;
+  display: none; pointer-events: auto;
+}
+body.role-admin #admin-panel { display: block; }
+
+#citizen-bar {
+  display: none;
+  position: absolute; bottom: 132px; left: 50%; transform: translateX(-50%);
+  z-index: 30; gap: 8px; white-space: nowrap;
+}
+body.role-citizen #citizen-bar { display: flex; }
+</style>
 </head>
 <body class="overflow-hidden h-screen w-screen select-none relative bg-black">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- PRAHARI BRAND SPLASH — Role Selection                                  -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <div id="role-splash" aria-modal="true" role="dialog">
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-sweep"></div>
+    <div id="splash-particles"></div>
+
+    <div class="splash-logo-wrap">
+      <svg class="splash-logo-svg" width="118" height="118" viewBox="0 0 118 118" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="lg-sh" x1="0" y1="0" x2="118" y2="118" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#0EA5E9"/>
+            <stop offset="55%" stop-color="#1D4ED8"/>
+            <stop offset="100%" stop-color="#0C4A6E"/>
+          </linearGradient>
+          <linearGradient id="lg-sw" x1="59" y1="58" x2="90" y2="38" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#38BDF8"/>
+            <stop offset="100%" stop-color="#F59E0B"/>
+          </linearGradient>
+          <radialGradient id="rg-gl" cx="59" cy="59" r="55" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="rgba(56,189,248,0.22)"/>
+            <stop offset="100%" stop-color="rgba(56,189,248,0)"/>
+          </radialGradient>
+          <filter id="gf"><feGaussianBlur stdDeviation="2.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <circle cx="59" cy="59" r="54" fill="url(#rg-gl)"/>
+        <path d="M59 7 L101 27 L101 61 C101 84 82 100 59 113 C36 100 17 84 17 61 L17 27 Z" fill="url(#lg-sh)" opacity="0.93"/>
+        <path d="M59 13 L96 31 L96 61 C96 82 78 97 59 108 C40 97 22 82 22 61 L22 31 Z" fill="none" stroke="rgba(56,189,248,0.32)" stroke-width="1.2"/>
+        <circle cx="59" cy="63" r="11" fill="none" stroke="url(#lg-sw)" stroke-width="2" filter="url(#gf)"/>
+        <circle cx="59" cy="63" r="20" fill="none" stroke="rgba(56,189,248,0.52)" stroke-width="1.3"/>
+        <circle cx="59" cy="63" r="29" fill="none" stroke="rgba(56,189,248,0.28)" stroke-width="0.9"/>
+        <circle cx="59" cy="63" r="38" fill="none" stroke="rgba(56,189,248,0.14)" stroke-width="0.7"/>
+        <circle cx="59" cy="63" r="3.8" fill="#38BDF8" filter="url(#gf)"/>
+        <circle cx="59" cy="63" r="2" fill="#fff"/>
+        <line x1="59" y1="63" x2="85" y2="43" stroke="url(#lg-sw)" stroke-width="2.2" stroke-linecap="round" opacity="0.75"/>
+        <line x1="59" y1="43" x2="59" y2="48" stroke="rgba(56,189,248,0.5)" stroke-width="1.3" stroke-linecap="round"/>
+        <line x1="59" y1="78" x2="59" y2="83" stroke="rgba(56,189,248,0.5)" stroke-width="1.3" stroke-linecap="round"/>
+        <line x1="39" y1="63" x2="44" y2="63" stroke="rgba(56,189,248,0.5)" stroke-width="1.3" stroke-linecap="round"/>
+        <line x1="74" y1="63" x2="79" y2="63" stroke="rgba(56,189,248,0.5)" stroke-width="1.3" stroke-linecap="round"/>
+        <g transform="translate(76,17) rotate(-22)">
+          <path d="M0 0 Q9 -4 13 4" stroke="#F59E0B" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path d="M3 3.5 Q11 -1.5 16 7.5" stroke="rgba(245,158,11,0.4)" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+          <circle cx="0" cy="0" r="2.8" fill="#F59E0B"/>
+          <line x1="-2.5" y1="0.5" x2="-8" y2="5.5" stroke="#F59E0B" stroke-width="1.6" stroke-linecap="round"/>
+        </g>
+      </svg>
+      <div class="splash-brand-name">PRAHARI</div>
+      <div class="splash-odia">ପ୍ରହରୀ &nbsp;·&nbsp; प्रहरी &nbsp;·&nbsp; The Sentinel</div>
+      <div class="splash-divider"></div>
+      <div class="splash-tagline">Cyclone Intelligence &nbsp;·&nbsp; Life-Saving Decisions &nbsp;·&nbsp; Coastal Odisha</div>
+    </div>
+
+    <div class="role-grid">
+
+      <div class="role-card"
+           style="--role-color:#38BDF8;--role-glow:rgba(56,189,248,0.07);--role-shadow:rgba(56,189,248,0.22);--role-icon-bg:rgba(56,189,248,0.09);"
+           onclick="selectRole('citizen')">
+        <div class="role-icon-wrap">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="10" r="5" stroke="#38BDF8" stroke-width="2"/>
+            <path d="M5 28c0-6.075 4.925-11 11-11s11 4.925 11 11" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 20v5M13.5 23l2.5 2.5 2.5-2.5" stroke="#F59E0B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="role-title">Citizen / Resident</div>
+        <div class="role-subtitle">ନାଗରିକ &nbsp;·&nbsp; नागरिक</div>
+        <div class="role-desc">I live near the coast and need to know if my family is safe, when to evacuate, and where to shelter.</div>
+        <div class="role-features">
+          <div class="role-feat"><div class="role-feat-dot"></div>Real-time weather for my village</div>
+          <div class="role-feat"><div class="role-feat-dot"></div>Nearest shelter & safe route</div>
+          <div class="role-feat"><div class="role-feat-dot"></div>Audio alerts in Odia / Hindi</div>
+          <div class="role-feat"><div class="role-feat-dot"></div>Emergency helpline (1077)</div>
+        </div>
+        <button class="role-cta" onclick="selectRole('citizen')">Enter as Citizen →</button>
+      </div>
+
+      <div class="role-card"
+           style="--role-color:#F59E0B;--role-glow:rgba(245,158,11,0.07);--role-shadow:rgba(245,158,11,0.22);--role-icon-bg:rgba(245,158,11,0.09);"
+           onclick="selectRole('responder')">
+        <div class="role-icon-wrap">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <rect x="4" y="8" width="24" height="16" rx="4" stroke="#F59E0B" stroke-width="2"/>
+            <path d="M16 11.5v7M13 15h6" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M8 24l-3 4M24 24l3 4" stroke="rgba(245,158,11,0.45)" stroke-width="1.7" stroke-linecap="round"/>
+            <circle cx="16" cy="5" r="2.2" fill="#F59E0B"/>
+          </svg>
+        </div>
+        <div class="role-title">Emergency Responder</div>
+        <div class="role-subtitle">SDRF / NDRF &nbsp;·&nbsp; बचाव दल</div>
+        <div class="role-desc">I am part of a rescue team and need tactical surge data, blocked routes, and shelter capacities.</div>
+        <div class="role-features">
+          <div class="role-feat"><div class="role-feat-dot"></div>Ward-level vulnerability scores</div>
+          <div class="role-feat"><div class="role-feat-dot"></div>Blocked & flooded route status</div>
+          <div class="role-feat"><div class="role-feat-dot"></div>Shelter capacity & occupancy</div>
+          <div class="role-feat"><div class="role-feat-dot"></div>Surge zone inundation depth</div>
+        </div>
+        <button class="role-cta" onclick="selectRole('responder')">Enter as Responder →</button>
+      </div>
+
+      <div class="role-card"
+           style="--role-color:#A78BFA;--role-glow:rgba(167,139,250,0.07);--role-shadow:rgba(167,139,250,0.22);--role-icon-bg:rgba(167,139,250,0.09);"
+           onclick="selectRole('admin')">
+        <div class="role-icon-wrap">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <rect x="3" y="3" width="10" height="10" rx="2.5" stroke="#A78BFA" stroke-width="2"/>
+            <rect x="19" y="3" width="10" height="10" rx="2.5" stroke="#A78BFA" stroke-width="2"/>
+            <rect x="3" y="19" width="10" height="10" rx="2.5" stroke="#A78BFA" stroke-width="2"/>
+            <rect x="19" y="19" width="10" height="10" rx="2.5" stroke="#38BDF8" stroke-width="2"/>
+            <path d="M24 22v5M21.5 24.5h5" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="role-title">District Collector</div>
+        <div class="role-subtitle">Admin &nbsp;·&nbsp; जिला प्रशासन</div>
+        <div class="role-desc">I oversee district disaster response and need an overview of all zones, resources, and alert status.</div>
+        <div class="role-features">
+          <div class="role-feat"><div class="role-feat-dot"></div>Multi-zone district overview</div>
+          <div class="role-feat"><div class="role-feat-dot"></div>Resource gaps & dispatch status</div>
+          <div class="role-feat"><div class="role-feat-dot"></div>Broadcast official alerts</div>
+          <div class="role-feat"><div class="role-feat-dot"></div>Storm track command centre</div>
+        </div>
+        <button class="role-cta" onclick="selectRole('admin')">Enter as Admin →</button>
+      </div>
+
+    </div>
+
+    <div class="splash-footer">
+      OSDMA &nbsp;·&nbsp; IMD &nbsp;·&nbsp; Open-Meteo &nbsp;·&nbsp; RainViewer &nbsp;·&nbsp; NASA FIRMS &nbsp;·&nbsp; Holland Surge Model<br>
+      AI Builder Cup 2026 &nbsp;·&nbsp; Hackathon Demo &nbsp;·&nbsp; Data: Cyclone Fani 2019, Puri District, Odisha
+    </div>
+  </div>
+
+  <!-- RESPONDER TACTICAL PANEL -->
+  <aside id="responder-panel" class="google-card rounded-3xl p-4 shadow-2xl space-y-3" style="border-color:rgba(245,158,11,0.25);">
+    <div class="flex items-center justify-between pb-2 border-b" style="border-color:rgba(245,158,11,0.18);">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.35);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round">
+            <rect x="3" y="6" width="18" height="13" rx="2"/><path d="M12 9v5M10 11h4"/><circle cx="12" cy="3" r="2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="text-[13px] font-extrabold text-white">Tactical Ops</div>
+          <div class="text-[9px] font-bold uppercase tracking-wider" style="color:#F59E0B;">SDRF Command View</div>
+        </div>
+      </div>
+      <span class="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase animate-pulse" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.5);color:#FCA5A5;">LIVE</span>
+    </div>
+    <div>
+      <div class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#F59E0B;">Ward Risk Scores</div>
+      <div id="resp-ward-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1"></div>
+    </div>
+    <div>
+      <div class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#F59E0B;">Evacuation Routes</div>
+      <div id="resp-route-list" class="space-y-1.5"></div>
+    </div>
+    <div>
+      <div class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#F59E0B;">Infrastructure Status</div>
+      <div id="resp-shelter-list" class="space-y-1.5"></div>
+    </div>
+  </aside>
+
+  <!-- ADMIN DISTRICT PANEL -->
+  <aside id="admin-panel" class="google-card rounded-3xl p-4 shadow-2xl space-y-3" style="border-color:rgba(167,139,250,0.25);">
+    <div class="flex items-center justify-between pb-2 border-b" style="border-color:rgba(167,139,250,0.18);">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(167,139,250,0.12);border:1.5px solid rgba(167,139,250,0.35);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round">
+            <rect x="2" y="3" width="9" height="9" rx="2"/><rect x="13" y="3" width="9" height="9" rx="2"/>
+            <rect x="2" y="14" width="9" height="9" rx="2"/><rect x="13" y="14" width="9" height="9" rx="2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="text-[13px] font-extrabold text-white">District Command</div>
+          <div class="text-[9px] font-bold uppercase tracking-wider" style="color:#A78BFA;">Collector's Dashboard</div>
+        </div>
+      </div>
+      <button onclick="openTrilingualAdvisoryModal()" class="text-[10px] font-bold px-2.5 py-1 rounded-lg hover:opacity-80 transition-opacity" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:#C4B5FD;">
+        Broadcast
+      </button>
+    </div>
+    <div id="admin-alert-summary"></div>
+    <div>
+      <div class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#A78BFA;">Zone Overview</div>
+      <div id="admin-zone-grid" class="grid grid-cols-2 gap-1.5"></div>
+    </div>
+    <div>
+      <div class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:#A78BFA;">Resource Status</div>
+      <div id="admin-resources" class="space-y-1"></div>
+    </div>
+    <div class="p-3 rounded-2xl space-y-1" style="background:rgba(15,15,25,0.6);border:1px solid rgba(167,139,250,0.18);">
+      <div class="text-[10px] font-bold uppercase tracking-wider" style="color:#A78BFA;">Active Storm</div>
+      <div id="admin-storm-stats" class="text-[11px] text-slate-200 space-y-0.5"></div>
+    </div>
+  </aside>
+
+  <!-- CITIZEN QUICK ACTION BAR -->
+  <div id="citizen-bar">
+    <button onclick="speakCurrentAdvisory()" class="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[11px] font-bold transition-all shadow-lg backdrop-blur-md" style="background:rgba(245,158,11,0.18);border:1.5px solid rgba(245,158,11,0.65);color:#FCD34D;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      ଶୁଣନ୍ତୁ (Listen)
+    </button>
+    <a href="tel:1077" class="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[11px] font-bold transition-all shadow-lg backdrop-blur-md no-underline" style="background:rgba(16,185,129,0.18);border:1.5px solid rgba(16,185,129,0.65);color:#6EE7B7;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.72 12 19.79 19.79 0 0 1 1.65 3.35 2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.89a16 16 0 0 0 6.08 6.08l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      Helpline: 1077
+    </a>
+    <button onclick="openTrilingualAdvisoryModal()" class="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[11px] font-bold transition-all shadow-lg backdrop-blur-md" style="background:rgba(56,189,248,0.18);border:1.5px solid rgba(56,189,248,0.65);color:#7DD3FC;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      Full Advisory
+    </button>
+  </div>
+
+
 
   <!-- ========================================================================= -->
   <!-- 1. GOOGLE-STYLE TOP BAR (Search Bar, Quick Location Pills, Live Badge)    -->
@@ -128,6 +520,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Role badge -->
+    <div id="role-badge" onclick="resetRole()" title="Click to switch role" style="display:none;"><div class="rb-dot"></div><span id="role-badge-text">CITIZEN</span></div>
 
     <!-- Center: Google-Style Search Bar & Quick Village Buttons -->
     <div class="flex items-center gap-2 max-w-2xl w-full justify-center">
@@ -505,6 +900,140 @@
   <!-- 6. APPLICATION JAVASCRIPT LOGIC                                           -->
   <!-- ========================================================================= -->
   <script>
+    /* ── PRAHARI Role System ─────────────────────────────────── */
+    let currentRole = null;
+
+    function selectRole(role) {
+      currentRole = role;
+      localStorage.setItem('prahari_role', role);
+      const splash = document.getElementById('role-splash');
+      splash.classList.add('exit');
+      setTimeout(() => { splash.style.display = 'none'; }, 680);
+      document.body.classList.remove('role-citizen', 'role-responder', 'role-admin');
+      document.body.classList.add('role-' + role);
+      const colors = { citizen:'#38BDF8', responder:'#F59E0B', admin:'#A78BFA' };
+      const labels = { citizen:'CITIZEN', responder:'SDRF RESPONDER', admin:'DISTRICT ADMIN' };
+      const badge = document.getElementById('role-badge');
+      badge.style.setProperty('--rb-color', colors[role]);
+      document.getElementById('role-badge-text').textContent = labels[role];
+      badge.style.display = 'flex';
+      if (role === 'citizen') { try { setLang('od'); } catch(e){} }
+      else { try { setLang('en'); } catch(e){} }
+      setTimeout(() => {
+        if (role === 'responder') populateResponderPanel();
+        if (role === 'admin') populateAdminPanel();
+      }, 800);
+    }
+
+    function resetRole() {
+      currentRole = null;
+      localStorage.removeItem('prahari_role');
+      document.body.classList.remove('role-citizen', 'role-responder', 'role-admin');
+      document.getElementById('role-badge').style.display = 'none';
+      const s = document.getElementById('role-splash');
+      s.style.display = 'flex';
+      s.classList.remove('exit');
+      spawnParticles();
+    }
+
+    function populateResponderPanel() {
+      const D = window.PRAHARI_DATA || {};
+      const wEl = document.getElementById('resp-ward-list');
+      if (D.puriWards && D.puriWards.features) {
+        const wards = D.puriWards.features.map(f=>f.properties).sort((a,b)=>b.score-a.score);
+        wEl.innerHTML = wards.map(w => {
+          const c = w.score>=80?'#EF4444':w.score>=55?'#F59E0B':'#10B981';
+          const bg = w.score>=80?'rgba(239,68,68,0.07)':w.score>=55?'rgba(245,158,11,0.07)':'rgba(16,185,129,0.05)';
+          return `<div style="background:${bg};border:1px solid ${c}35;border-radius:10px;padding:7px 9px;display:flex;align-items:center;gap:8px;">
+            <div style="width:36px;height:36px;border-radius:9px;background:${c}16;border:1px solid ${c}50;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;font-weight:900;color:${c};">${w.score}</div>
+            <div><div style="font-size:11px;font-weight:700;color:#f8fafc;">${w.ward_name}</div>
+            <div style="font-size:10px;color:rgba(148,163,184,0.8);">${w.tier} · Pop ${(w.population||0).toLocaleString()}</div>
+            ${w.shelter_route_exposed?'<div style="font-size:9.5px;color:#F59E0B;font-weight:700;">⚠ Route exposed</div>':''}</div></div>`;
+        }).join('');
+      }
+      const rEl = document.getElementById('resp-route-list');
+      if (D.evacuationRoutes && D.evacuationRoutes.features) {
+        rEl.innerHTML = D.evacuationRoutes.features.map(f => {
+          const p = f.properties||{};
+          const ok = p.status==='open';
+          const c = ok?'#10B981':'#EF4444';
+          return `<div style="background:${c}08;border:1px solid ${c}30;border-radius:9px;padding:7px 10px;display:flex;align-items:center;gap:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0;${ok?'':'box-shadow:0 0 6px #EF4444;'}"></div>
+            <div><div style="font-size:11px;font-weight:700;color:#f8fafc;">${p.name||p.id||'Route'}</div>
+            <div style="font-size:10px;color:rgba(148,163,184,0.8);">${p.status||'?'}${p.hazard_depth_m!=null?' · Depth: '+p.hazard_depth_m+'m':''}</div></div></div>`;
+        }).join('');
+      }
+      const sEl = document.getElementById('resp-shelter-list');
+      if (D.infrastructure && D.infrastructure.features) {
+        sEl.innerHTML = D.infrastructure.features.slice(0,5).map(f => {
+          const p = f.properties||{};
+          const ok = p.status==='open'||p.status==='operational';
+          const c = ok?'#10B981':'#F59E0B';
+          return `<div style="background:${c}08;border:1px solid ${c}30;border-radius:9px;padding:7px 10px;">
+            <div style="font-size:11px;font-weight:700;color:#f8fafc;">${p.name||p.id||'Facility'}</div>
+            <div style="font-size:10px;color:rgba(148,163,184,0.8);">${p.kind||''} · ${p.status||'?'}${p.capacity?' · Cap '+p.capacity:''}</div></div>`;
+        }).join('');
+      }
+    }
+
+    function populateAdminPanel() {
+      const D = window.PRAHARI_DATA || {};
+      document.getElementById('admin-alert-summary').innerHTML = `
+        <div style="background:rgba(239,68,68,0.09);border:1px solid rgba(239,68,68,0.38);border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div><div style="font-size:12px;font-weight:800;color:#f8fafc;">CYCLONE FANI — ACTIVE</div>
+          <div style="font-size:10px;color:rgba(148,163,184,0.8);">Puri coast · ESCS · Full evacuation order</div></div>
+        </div>`;
+      const zones=[{name:'Puri Town',risk:'CRITICAL',score:92,c:'#EF4444'},{name:'Brahmagiri',risk:'HIGH',score:74,c:'#F59E0B'},{name:'Konark',risk:'HIGH',score:68,c:'#F59E0B'},{name:'Nimapada',risk:'MODERATE',score:45,c:'#38BDF8'}];
+      document.getElementById('admin-zone-grid').innerHTML = zones.map(z=>`
+        <div style="background:${z.c}09;border:1px solid ${z.c}30;border-radius:10px;padding:8px 10px;">
+          <div style="font-size:11px;font-weight:700;color:#f8fafc;">${z.name}</div>
+          <div style="font-size:9px;font-weight:800;letter-spacing:.7px;color:${z.c};">${z.risk}</div>
+          <div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.08);margin-top:5px;">
+            <div style="height:100%;width:${z.score}%;border-radius:2px;background:${z.c};"></div></div></div>`).join('');
+      const res=[{l:'Evacuation buses dispatched',v:'124 / 200',p:62,c:'#F59E0B'},{l:'Shelters at capacity',v:'3 / 11',p:27,c:'#10B981'},{l:'Medical teams deployed',v:'8 / 12',p:67,c:'#38BDF8'}];
+      document.getElementById('admin-resources').innerHTML = res.map(r=>`
+        <div style="padding:5px 0;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+            <span style="font-size:10px;color:rgba(148,163,184,0.8);">${r.l}</span>
+            <span style="font-size:10px;font-weight:700;color:${r.c};">${r.v}</span></div>
+          <div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.07);">
+            <div style="height:100%;width:${r.p}%;border-radius:2px;background:${r.c};"></div></div></div>`).join('');
+      if (D.stormTrack && D.stormTrack.length) {
+        const pk=D.stormTrack.reduce((a,b)=>b.max_wind_kmh>a.max_wind_kmh?b:a);
+        const ls=D.stormTrack[D.stormTrack.length-1];
+        document.getElementById('admin-storm-stats').innerHTML=`
+          <div>Storm: <span style="color:#f8fafc;font-weight:700;">${pk.storm_name}</span></div>
+          <div>Peak winds: <span style="color:#EF4444;font-weight:700;">${pk.max_wind_kmh} km/h</span></div>
+          <div>Pressure: <span style="font-weight:700;">${pk.central_pressure_hPa} hPa</span></div>
+          <div>Category: <span style="color:#F59E0B;font-weight:700;">${pk.category}</span></div>
+          <div>Landfall: <span style="font-weight:700;">${ls.lat.toFixed(2)}°N ${ls.lon.toFixed(2)}°E</span></div>`;
+      }
+    }
+
+    function spawnParticles() {
+      const el = document.getElementById('splash-particles');
+      if (!el) return;
+      el.innerHTML = '';
+      for (let i=0; i<18; i++) {
+        const p = document.createElement('div');
+        p.className = 'splash-particle';
+        const sz = 2 + Math.random()*4;
+        p.style.cssText = `width:${sz}px;height:${sz}px;left:${10+Math.random()*80}%;top:${20+Math.random()*60}%;animation-duration:${4+Math.random()*5}s;animation-delay:${Math.random()*4}s;`;
+        el.appendChild(p);
+      }
+    }
+
+    (function initRole(){
+      spawnParticles();
+      const saved = localStorage.getItem('prahari_role');
+      if (saved && ['citizen','responder','admin'].includes(saved)) {
+        setTimeout(()=>selectRole(saved), 350);
+      }
+    })();
+
+    /* ── END Role System ─────────────────────────────────────── */
+
     let map = null;
     let currentBasemap = 'esri';
     let currentLang = 'od'; // Default to Odia for 10th-pass citizen in Odisha
