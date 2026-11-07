@@ -8,6 +8,8 @@ driven by **real Cyclone Fani (2019) project data**, a built-in **Gemini AI advi
 plug-in **Google Earth Engine** hazard layers (built; activate with Earth Engine credentials).
 
 **🌐 Live app:** https://prahari-orbital-console.vercel.app
+**🎬 Demo video:** [Watch the narrated walkthrough](demo/PRAHARI_demo.mp4)
+
 
 ## Highlights
 
